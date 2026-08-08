@@ -16,6 +16,7 @@ def migrate():
     cursor.execute("PRAGMA table_info(model_versions)")
     existing_columns = [row[1] for row in cursor.fetchall()]
 
+    # model_versions new columns
     new_columns = [
         ("artifact_path", "VARCHAR(512)"),
         ("algorithm", "VARCHAR(100)"),
@@ -28,6 +29,20 @@ def migrate():
         if col_name not in existing_columns:
             print(f"Adding column '{col_name}' to 'model_versions' table...")
             cursor.execute(f"ALTER TABLE model_versions ADD COLUMN {col_name} {col_type}")
+
+    # drift_events columns
+    cursor.execute("PRAGMA table_info(drift_events)")
+    drift_event_cols = [row[1] for row in cursor.fetchall()]
+    if "overall_status" not in drift_event_cols:
+        cursor.execute("ALTER TABLE drift_events ADD COLUMN overall_status VARCHAR(50) DEFAULT 'NONE'")
+
+    # drift_scores columns
+    cursor.execute("PRAGMA table_info(drift_scores)")
+    drift_score_cols = [row[1] for row in cursor.fetchall()]
+    if "severity" not in drift_score_cols:
+        cursor.execute("ALTER TABLE drift_scores ADD COLUMN severity VARCHAR(50) DEFAULT 'NONE'")
+    if "is_drifted" not in drift_score_cols:
+        cursor.execute("ALTER TABLE drift_scores ADD COLUMN is_drifted BOOLEAN DEFAULT 0")
 
     conn.commit()
     conn.close()
