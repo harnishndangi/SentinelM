@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -10,19 +11,97 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-        sentinel: {
-          50: '#f0f7ff',
-          100: '#e0effe',
-          500: '#0284c7',
-          600: '#0369a1',
-          900: '#0c4a6e',
-          950: '#082f49',
-        }
+        "on-tertiary": "#482900",
+        "on-background": "#e0e3e7",
+        "on-tertiary-fixed-variant": "#673d00",
+        "inverse-primary": "#6d3bd7",
+        "surface-container-low": "#181c1f",
+        "surface-container-high": "#262a2e",
+        "primary-container": "#a078ff",
+        "on-primary-container": "#340080",
+        "primary": "#d0bcff",
+        "on-error-container": "#ffdad6",
+        "on-surface": "#e0e3e7",
+        "on-surface-variant": "#cbc3d7",
+        "surface-variant": "#313538",
+        "outline-variant": "#494454",
+        "on-secondary-fixed-variant": "#004c69",
+        "surface-bright": "#363a3d",
+        "surface-dim": "#101417",
+        "secondary": "#7bd0ff",
+        "primary-fixed-dim": "#d0bcff",
+        "error-container": "#93000a",
+        "on-secondary-container": "#00374d",
+        "tertiary": "#ffb869",
+        "tertiary-fixed": "#ffdcbb",
+        "inverse-on-surface": "#2d3134",
+        "error": "#ffb4ab",
+        "surface": "#101417",
+        "secondary-container": "#00a6e0",
+        "on-tertiary-container": "#3f2300",
+        "background": "#101417",
+        "tertiary-fixed-dim": "#ffb869",
+        "secondary-fixed-dim": "#7bd0ff",
+        "surface-container-highest": "#313538",
+        "on-primary-fixed": "#23005c",
+        "primary-fixed": "#e9ddff",
+        "outline": "#958ea0",
+        "on-primary-fixed-variant": "#5516be",
+        "tertiary-container": "#ca801e",
+        "secondary-fixed": "#c4e7ff",
+        "surface-tint": "#d0bcff",
+        "surface-container-lowest": "#0b0f12",
+        "on-primary": "#3c0091",
+        "surface-container": "#1c2023",
+        "on-tertiary-fixed": "#2c1700",
+        "inverse-surface": "#e0e3e7",
+        "on-secondary": "#00354a",
+        "on-error": "#690005",
+        "on-secondary-fixed": "#001e2c",
+        "status-success": "rgba(34, 197, 94, 0.1)",
+        "status-success-text": "#4ade80",
+        "status-error": "rgba(239, 68, 68, 0.1)",
+        "status-error-text": "#f87171",
+        "status-warning": "rgba(234, 179, 8, 0.1)",
+        "status-warning-text": "#facc15"
       },
+      borderRadius: {
+        "DEFAULT": "0.25rem",
+        "lg": "0.5rem",
+        "xl": "0.75rem",
+        "full": "9999px"
+      },
+      spacing: {
+        "xl": "32px",
+        "base": "4px",
+        "margin": "24px",
+        "md": "16px",
+        "lg": "24px",
+        "sm": "8px",
+        "xs": "4px",
+        "gutter": "16px"
+      },
+      fontFamily: {
+        "mono-table": ["JetBrains Mono", "monospace"],
+        "display-lg": ["Inter", "sans-serif"],
+        "body-sm": ["Inter", "sans-serif"],
+        "display-md": ["Inter", "sans-serif"],
+        "mono-label": ["JetBrains Mono", "monospace"],
+        "mono-metric": ["JetBrains Mono", "monospace"],
+        "body-md": ["Inter", "sans-serif"]
+      },
+      fontSize: {
+        "mono-table": ["12px", { lineHeight: "16px", fontWeight: "400" }],
+        "display-lg": ["32px", { lineHeight: "40px", letterSpacing: "-0.02em", fontWeight: "700" }],
+        "body-sm": ["12px", { lineHeight: "18px", fontWeight: "400" }],
+        "display-md": ["24px", { lineHeight: "32px", letterSpacing: "-0.01em", fontWeight: "600" }],
+        "mono-label": ["13px", { lineHeight: "16px", fontWeight: "500" }],
+        "mono-metric": ["18px", { lineHeight: "24px", fontWeight: "600" }],
+        "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }]
+      }
     },
   },
   plugins: [],
 };
 export default config;
+

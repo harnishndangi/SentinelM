@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import SideNavBar from "@/components/layout/SideNavBar";
+import TopAppBar from "@/components/layout/TopAppBar";
 
 export const metadata: Metadata = {
-  title: "SentinelML - Autonomous ML Reliability & Self-Healing Platform",
-  description: "Enterprise portfolio-grade ML Reliability, Drift Detection, & Self-Healing System",
+  title: "Dashboard - SentinelML",
+  description: "Enterprise portfolio-grade ML Reliability, Drift Detection, & Self-Healing Platform",
 };
 
 export default function RootLayout({
@@ -12,10 +14,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="antialiased bg-[#090d16] text-gray-100 min-h-screen">
-        {children}
+    <html lang="en" className="dark">
+      <body className="bg-background text-on-surface antialiased flex h-screen overflow-hidden">
+        {/* Fixed Navigation Sidebar (240px wide) */}
+        <SideNavBar />
+
+        {/* Fixed Top App Header (64px high) */}
+        <TopAppBar />
+
+        {/* Content Viewport Container */}
+        <div className="pl-[240px] pt-[64px] w-full h-screen overflow-hidden flex flex-col">
+          {children}
+        </div>
       </body>
     </html>
   );
 }
+
+
