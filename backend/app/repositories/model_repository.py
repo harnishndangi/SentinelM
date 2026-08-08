@@ -35,6 +35,14 @@ class ModelVersionRepository(BaseRepository[ModelVersion]):
             .first()
         )
 
+    def get_versions_by_status(
+        self, model_id: Optional[str] = None, status: ModelVersionStatus = ModelVersionStatus.CANDIDATE
+    ) -> List[ModelVersion]:
+        query = self.db.query(ModelVersion).filter(ModelVersion.status == status)
+        if model_id:
+            query = query.filter(ModelVersion.model_id == model_id)
+        return query.order_by(ModelVersion.created_at.desc()).all()
+
 
 class ModelMetricRepository(BaseRepository[ModelMetric]):
     def __init__(self, db: Session):

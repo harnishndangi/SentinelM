@@ -12,6 +12,9 @@ class ModelService:
         self.version_repo = ModelVersionRepository(db)
         self.metric_repo = ModelMetricRepository(db)
 
+        from ml.registry.model_registry import ModelRegistry
+        self.registry = ModelRegistry(db)
+
     def create_model(self, name: str, description: Optional[str] = None, framework: Optional[str] = None, task_type: Optional[str] = None) -> MLModel:
         existing = self.model_repo.get_by_name(name)
         if existing:

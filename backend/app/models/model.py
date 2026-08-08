@@ -26,7 +26,12 @@ class ModelVersion(Base, UUIDMixin, TimestampMixin):
     version = Column(String(50), nullable=False)
     status = Column(SQLEnum(ModelVersionStatus), default=ModelVersionStatus.TRAINING, nullable=False, index=True)
     artifact_uri = Column(String(512), nullable=True)
+    artifact_path = Column(String(512), nullable=True)
+    algorithm = Column(String(100), nullable=True)
+    dataset_version = Column(String(50), nullable=True)
+    training_run_id = Column(String(255), nullable=True)
     parameters = Column(JSON, nullable=True)
+    metrics_summary = Column(JSON, nullable=True)
 
     # Relationships
     model = relationship("MLModel", back_populates="versions")
@@ -36,6 +41,32 @@ class ModelVersion(Base, UUIDMixin, TimestampMixin):
     incidents = relationship("Incident", back_populates="model_version", cascade="all, delete-orphan")
     training_runs = relationship("TrainingRun", back_populates="model_version", cascade="all, delete-orphan")
     deployments = relationship("Deployment", back_populates="model_version", cascade="all, delete-orphan")
+
+    @property
+    def metrics_dict(self) -> dict:
+        """Returns dictionary of metrics combined from metrics_summary and ModelMetric relationship."""
+        result = {}
+        if self.metrics_summary and isinstance(self.metrics_summary, dict):
+            result.update(self.metrics_summary)
+        for m in self.metrics:
+            result[m.metric_name] = m.metric_value
+        return result
+
+    def to_registry_dict(self) -> dict:
+        """Formats model version into standard SentinelML Model Registry dict representation."""
+        effective_artifact_path = self.artifact_path or self.artifact_uri
+        return {
+            "model_id": self.model_id,
+            "model_name": self.model.name if self.model else None,
+            "version": self.version,
+            "algorithm": self.algorithm,
+            "artifact_path": effective_artifact_path,
+            "dataset_version": self.dataset_version,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "metrics": self.metrics_dict,
+            "status": self.status.value if hasattr(self.status, "value") else str(self.status),
+            "training_run_id": self.training_run_id,
+        }
 
 
 class ModelMetric(Base, UUIDMixin, TimestampMixin):
