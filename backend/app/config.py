@@ -26,7 +26,19 @@ class Settings(BaseSettings):
             return v
         raise ValueError(v)
 
-    # Database
+    # Supabase & PostgreSQL Database Configuration
+    SUPABASE_URL: str = ""
+    SUPABASE_KEY: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
+
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = ""
+    POSTGRES_HOST: str = "localhost"
+    POSTGRES_PORT: int = 5432
+    POSTGRES_DB: str = "postgres"
+
+    # Database URL (Supabase PostgreSQL connection string)
+    # Example: postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres
     DATABASE_URL: str = "sqlite:///./sentinelml.db"
 
     # Redis Configuration

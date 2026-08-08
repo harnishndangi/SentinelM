@@ -1,0 +1,50 @@
+{
+  "feature_count": 29,
+  "feature_names": [
+    "transaction_amount",
+    "transaction_hour",
+    "device_age_days",
+    "account_age_days",
+    "transactions_last_24h",
+    "average_transaction_amount",
+    "distance_from_home",
+    "international_transaction",
+    "failed_transactions_last_24h",
+    "merchant_category_electronics",
+    "merchant_category_entertainment",
+    "merchant_category_food",
+    "merchant_category_luxury",
+    "merchant_category_online",
+    "merchant_category_retail",
+    "merchant_category_travel",
+    "merchant_category_utilities",
+    "device_type_desktop_mac",
+    "device_type_desktop_windows",
+    "device_type_mobile_android",
+    "device_type_mobile_ios",
+    "device_type_tablet",
+    "device_type_unknown",
+    "region_africa",
+    "region_asia_pacific",
+    "region_europe",
+    "region_latin_america",
+    "region_middle_east",
+    "region_north_america"
+  ],
+  "numerical_features": [
+    "transaction_amount",
+    "transaction_hour",
+    "device_age_days",
+    "account_age_days",
+    "transactions_last_24h",
+    "average_transaction_amount",
+    "distance_from_home",
+    "international_transaction",
+    "failed_transactions_last_24h"
+  ],
+  "categorical_features": [
+    "merchant_category",
+    "device_type",
+    "region"
+  ]
+}

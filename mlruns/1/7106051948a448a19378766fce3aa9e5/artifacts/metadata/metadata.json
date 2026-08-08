@@ -1,0 +1,27 @@
+{
+  "model_name": "LogisticRegression",
+  "model_version": "v1.0.0",
+  "dataset_version": "v1.0.0",
+  "feature_version": "v1.0.0",
+  "git_commit": "90e6056dd42217beb931a6f2e728567bc2c39a81",
+  "created_at": "2026-08-08T05:24:29.717067+00:00",
+  "hyperparameters": {
+    "class_weight": "balanced",
+    "max_iter": 1000,
+    "random_state": 42,
+    "C": 1.0,
+    "solver": "lbfgs"
+  },
+  "metrics": {
+    "precision": 0.9804,
+    "recall": 1.0,
+    "f1": 0.9901,
+    "roc_auc": 1.0,
+    "pr_auc": 1.0,
+    "training_time": 0.1074,
+    "training_time_sec": 0.1074,
+    "prediction_latency": 9e-05,
+    "prediction_latency_ms": 9e-05,
+    "accuracy": 0.9996
+  }
+}

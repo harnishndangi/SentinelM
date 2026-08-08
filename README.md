@@ -195,6 +195,36 @@ Frontend Dashboard will be accessible at `http://localhost:3000`.
 
 ---
 
+## 📊 Launching MLflow Experiment Tracking Locally (Without Docker)
+
+SentinelML tracks all model training runs, hyperparameters, metrics, and model artifacts using MLflow. You can run MLflow locally without Docker.
+
+### Option 1: Launch MLflow Interactive UI
+To launch the local MLflow dashboard and browse tracked experiments (`SentinelML-FraudDetection`):
+```bash
+# From project root with venv activated:
+python -m mlflow ui --port 5000
+```
+Open your browser at [http://127.0.0.1:5000](http://127.0.0.1:5000).
+
+### Option 2: Launch MLflow Tracking Server with SQLite Backend
+For persistent experiment tracking with SQLite store and local artifact repository:
+```bash
+python -m mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns --host 127.0.0.1 --port 5000
+```
+
+### Environment Configuration (Optional)
+To point SentinelML to your running local MLflow server, set the environment variable:
+```bash
+# PowerShell:
+$env:MLFLOW_TRACKING_URI="http://127.0.0.1:5000"
+
+# Bash / Zsh:
+export MLFLOW_TRACKING_URI="http://127.0.0.1:5000"
+```
+
+---
+
 ## 🧪 Verification & Testing
 
 Run the automated Pytest test suite from the root directory:

@@ -1,0 +1,31 @@
+{
+  "model_name": "XGBoost",
+  "model_version": "v1.0.0",
+  "dataset_version": "v1.0.0",
+  "feature_version": "v1.0.0",
+  "git_commit": "90e6056dd42217beb931a6f2e728567bc2c39a81",
+  "created_at": "2026-08-07T16:09:43.872317+00:00",
+  "hyperparameters": {
+    "n_estimators": 150,
+    "max_depth": 6,
+    "learning_rate": 0.05,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "random_state": 42,
+    "eval_metric": "logloss",
+    "n_jobs": -1,
+    "scale_pos_weight": 49.0
+  },
+  "metrics": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "roc_auc": 1.0,
+    "pr_auc": 1.0,
+    "training_time": 0.4919,
+    "training_time_sec": 0.4919,
+    "prediction_latency": 0.000554,
+    "prediction_latency_ms": 0.000554,
+    "accuracy": 1.0
+  }
+}
