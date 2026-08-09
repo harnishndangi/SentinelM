@@ -13,10 +13,14 @@ class Prediction(Base, UUIDMixin, TimestampMixin):
     output_prediction = Column(JSON, nullable=True)
     confidence_score = Column(Float, nullable=True)
     latency_ms = Column(Float, nullable=True)
+    actual_label = Column(Float, nullable=True)
+    label_received_at = Column(JSON, nullable=True)
+    error_val = Column(Float, nullable=True)
 
     # Relationships
     model_version = relationship("ModelVersion", back_populates="predictions")
     feature_logs = relationship("FeatureLog", back_populates="prediction", cascade="all, delete-orphan")
+    ground_truth_logs = relationship("GroundTruthLog", back_populates="prediction", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("idx_prediction_model_created", "model_version_id", "created_at"),

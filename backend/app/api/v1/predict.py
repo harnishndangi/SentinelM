@@ -10,6 +10,8 @@ from backend.app.schemas.predict_schemas import (
     PredictionResponse,
     BatchPredictionRequest,
     BatchPredictionResponse,
+    LabelFeedbackRequest,
+    LabelFeedbackResponse,
 )
 from backend.app.services.prediction_service import PredictionService
 
@@ -67,4 +69,36 @@ def predict_fraud_batch(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Batch inference error: {str(e)}",
+        )
+
+
+@router.post(
+    "/feedback/label",
+    response_model=LabelFeedbackResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Ingest Delayed Ground Truth Label Feedback",
+    description="Ingests delayed actual outcomes (e.g. chargebacks) and evaluates stream concept drift.",
+)
+def submit_label_feedback(
+    request: LabelFeedbackRequest,
+    db: Session = Depends(get_db),
+) -> LabelFeedbackResponse:
+    """Submits delayed label feedback for a past prediction."""
+    try:
+        service = PredictionService(db)
+        res = service.process_delayed_label(
+            prediction_id=request.prediction_id,
+            actual_label=request.actual_label,
+            feedback_source=request.feedback_source or "manual_review",
+        )
+        return LabelFeedbackResponse(**res)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Delayed label feedback processing error: {str(e)}",
         )

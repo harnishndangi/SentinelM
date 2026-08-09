@@ -303,3 +303,21 @@ class PredictionService:
             total_transactions=len(responses),
             batch_latency_ms=total_batch_latency_ms,
         )
+
+    def process_delayed_label(
+        self,
+        prediction_id: str,
+        actual_label: float,
+        feedback_source: str = "manual_review",
+    ) -> Dict[str, Any]:
+        """
+        Processes delayed ground truth label feedback and evaluates concept drift.
+        """
+        from ml.drift.delayed_labels import DelayedLabelProcessor
+        processor = DelayedLabelProcessor(self.db)
+        return processor.process_feedback(
+            prediction_id=prediction_id,
+            actual_label=actual_label,
+            feedback_source=feedback_source,
+            save_to_db=True,
+        )
