@@ -174,6 +174,7 @@ class IncidentService:
             "resolved_at": inc.resolved_at.isoformat() if inc.resolved_at else None,
             "description": inc.description,
             "root_cause": inc.rca_result,
+            "rca_result": inc.rca_result,
             "recommended_action": inc.recommended_action,
             "timeline": timeline_data,
         }

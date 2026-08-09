@@ -127,6 +127,9 @@ CREATE TABLE IF NOT EXISTS predictions (
     output_prediction JSONB,
     confidence_score DOUBLE PRECISION,
     latency_ms DOUBLE PRECISION,
+    actual_label DOUBLE PRECISION,
+    label_received_at JSONB,
+    error_val DOUBLE PRECISION,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -145,6 +148,19 @@ CREATE TABLE IF NOT EXISTS feature_logs (
 );
 CREATE INDEX IF NOT EXISTS ix_feature_logs_prediction_id ON feature_logs(prediction_id);
 CREATE INDEX IF NOT EXISTS ix_feature_logs_feature_name ON feature_logs(feature_name);
+
+-- Ground Truth Logs (Delayed Label Feedback)
+CREATE TABLE IF NOT EXISTS ground_truth_logs (
+    id VARCHAR(36) PRIMARY KEY,
+    prediction_id VARCHAR(36) NOT NULL REFERENCES predictions(id) ON DELETE CASCADE,
+    actual_label DOUBLE PRECISION NOT NULL,
+    feedback_source VARCHAR(100) NOT NULL DEFAULT 'manual_review',
+    received_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS ix_ground_truth_logs_prediction_id ON ground_truth_logs(prediction_id);
+CREATE INDEX IF NOT EXISTS ix_ground_truth_logs_received_at ON ground_truth_logs(received_at);
 
 -- Drift Events
 CREATE TABLE IF NOT EXISTS drift_events (
@@ -346,4 +362,16 @@ VALUES
     ('mm-fd-005', 'mv-fraud-detector-v1', 'pr_auc', 0.94, 'test')
 ON CONFLICT DO NOTHING;
 
+-- 4. Enable Supabase Realtime for Live Streaming
+DO $$ 
+BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE incidents;
+    ALTER PUBLICATION supabase_realtime ADD TABLE drift_events;
+    ALTER PUBLICATION supabase_realtime ADD TABLE alerts;
+    ALTER PUBLICATION supabase_realtime ADD TABLE predictions;
+    ALTER PUBLICATION supabase_realtime ADD TABLE ground_truth_logs;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
 COMMIT;
+
