@@ -175,4 +175,19 @@ class DriftEngine:
             self.db.commit()
             summary["drift_event_id"] = drift_event.id
 
+            # Automatically trigger Incident Creation when drift is HIGH/CRITICAL
+            if is_actionable:
+                try:
+                    from backend.app.services.incident_service import IncidentService
+                    inc_service = IncidentService(self.db)
+                    inc_obj = inc_service.create_automated_drift_incident(
+                        drift_report=summary,
+                        model_version_id=model_version_id,
+                        ref_df=ref_df,
+                        cur_df=cur_df,
+                    )
+                    summary["incident_id"] = inc_obj.id
+                except Exception as e:
+                    summary["incident_error"] = f"Failed to automate incident creation: {str(e)}"
+
         return summary

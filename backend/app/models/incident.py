@@ -15,6 +15,9 @@ class Incident(Base, UUIDMixin, TimestampMixin):
     status = Column(SQLEnum(IncidentStatus), default=IncidentStatus.OPEN, nullable=False, index=True)
     opened_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     resolved_at = Column(DateTime(timezone=True), nullable=True)
+    incident_type = Column(String(100), default="DATA_DRIFT", nullable=False)
+    recommended_action = Column(String(255), default="RETRAIN_MODEL", nullable=True)
+    rca_result = Column(JSON, nullable=True)
 
     # Relationships
     model_version = relationship("ModelVersion", back_populates="incidents")
