@@ -143,6 +143,20 @@ def test_chi_square_detector():
     assert res.p_value < 0.05
 
 
+def test_categorical_distribution_detector():
+    """Verifies CategoricalDistributionDetector (Total Variation Distance / Distribution Difference)."""
+    from ml.drift.chi_square import CategoricalDistributionDetector
+    ref_cat = ["A"] * 500 + ["B"] * 500
+    cur_cat = ["A"] * 100 + ["B"] * 900  # Shifted category distribution
+
+    detector = CategoricalDistributionDetector(threshold=0.1)
+    res = detector.detect(ref_cat, cur_cat, feature_name="device_type")
+
+    assert res.method == "DistributionDifference"
+    assert res.score >= 0.1
+    assert res.is_drifted is True
+
+
 def test_feature_drift_analyzer():
     """Verifies FeatureDriftAnalyzer handling mixed numerical and categorical DataFrame."""
     np.random.seed(42)

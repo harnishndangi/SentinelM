@@ -76,3 +76,63 @@ class ChiSquareDetector(BaseDriftDetector):
             p_value=p_val,
             details={"chi2_statistic": chi2_stat, "categories_count": len(all_categories)},
         )
+
+
+class CategoricalDistributionDetector(BaseDriftDetector):
+    """
+    Categorical Distribution Difference Detector (Total Variation Distance / L1 Distance).
+    Calculates 0.5 * sum(|P(x) - Q(x)|) across all category levels.
+    Range: [0.0, 1.0].
+    """
+
+    def __init__(self, threshold: float = 0.1):
+        super().__init__(threshold=threshold)
+
+    def detect(
+        self,
+        reference: Union[np.ndarray, List[Any], pd.Series],
+        current: Union[np.ndarray, List[Any], pd.Series],
+        feature_name: str = "feature",
+    ) -> DriftResult:
+        ref_s = pd.Series(reference).dropna().astype(str)
+        cur_s = pd.Series(current).dropna().astype(str)
+
+        if len(ref_s) == 0 or len(cur_s) == 0:
+            return DriftResult(
+                feature=feature_name,
+                method="DistributionDifference",
+                score=0.0,
+                threshold=self.threshold,
+                severity=DriftSeverity.NONE,
+                is_drifted=False,
+            )
+
+        all_categories = sorted(list(set(ref_s.unique()).union(set(cur_s.unique()))))
+
+        ref_props = ref_s.value_counts(normalize=True).reindex(all_categories, fill_value=0.0).values
+        cur_props = cur_s.value_counts(normalize=True).reindex(all_categories, fill_value=0.0).values
+
+        # Total Variation Distance
+        tvd = float(0.5 * np.sum(np.abs(cur_props - ref_props)))
+        is_drifted = tvd >= self.threshold
+
+        if tvd < 0.05:
+            severity = DriftSeverity.NONE
+        elif tvd < 0.1:
+            severity = DriftSeverity.LOW
+        elif tvd < 0.2:
+            severity = DriftSeverity.MEDIUM
+        elif tvd < 0.35:
+            severity = DriftSeverity.HIGH
+        else:
+            severity = DriftSeverity.CRITICAL
+
+        return DriftResult(
+            feature=feature_name,
+            method="DistributionDifference",
+            score=tvd,
+            threshold=self.threshold,
+            severity=severity,
+            is_drifted=is_drifted,
+            details={"total_variation_distance": tvd, "categories_count": len(all_categories)},
+        )
