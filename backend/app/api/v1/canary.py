@@ -1,0 +1,170 @@
+"""
+FastAPI Router for Application-Level Canary & Shadow Deployment Management.
+
+Exposes:
+- GET /api/v1/canary/config
+- POST /api/v1/canary/config
+- GET /api/v1/canary/metrics
+- POST /api/v1/canary/promote
+"""
+from typing import Dict, Any, Optional
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+
+from backend.app.dependencies import get_db
+from ml.evaluation.canary import CanaryConfigManager, ALLOWED_CANARY_PERCENTAGES
+from ml.evaluation.quality_gate import ModelQualityGate
+from ml.registry.model_registry import ModelRegistry
+
+router = APIRouter(prefix="/canary", tags=["Canary & Shadow Deployment"])
+
+
+class UpdateCanaryConfigRequest(BaseModel):
+    enabled: Optional[bool] = Field(default=None, description="Toggle active canary/shadow evaluation")
+    mode: Optional[str] = Field(default=None, description="Deployment mode: 'CANARY' or 'SHADOW'")
+    canary_percentage: Optional[int] = Field(default=None, description="Percentage of traffic routed to candidate model (0, 5, 10, 25, 50, 100)")
+    candidate_version_id: Optional[str] = Field(default=None, description="Target candidate model version ID")
+    production_version_id: Optional[str] = Field(default=None, description="Target production model version ID")
+
+
+class PromoteCanaryRequest(BaseModel):
+    model_name: Optional[str] = Field(default="FraudDetector", description="Model name to promote")
+    candidate_version: Optional[str] = Field(default=None, description="Candidate version string to promote to production")
+    candidate_version_id: Optional[str] = Field(default=None, description="Candidate version ID to promote to production")
+    force: Optional[bool] = Field(default=False, description="Force promotion bypassing quality gate checks")
+
+
+@router.get(
+    "/config",
+    status_code=status.HTTP_200_OK,
+    summary="Get Canary & Shadow Configuration",
+    description="Retrieves current application-level canary routing mode, candidate version ID, and traffic split percentage.",
+)
+def get_canary_config():
+    """Returns active canary deployment configuration."""
+    manager = CanaryConfigManager()
+    return manager.get_config()
+
+
+@router.post(
+    "/config",
+    status_code=status.HTTP_200_OK,
+    summary="Update Canary & Shadow Configuration",
+    description="Configures inside-FastAPI traffic splitting percentages (0, 5, 10, 25, 50, 100), deployment mode ('CANARY' or 'SHADOW'), and candidate version ID.",
+)
+def update_canary_config(request: UpdateCanaryConfigRequest):
+    """Updates canary deployment configuration."""
+    manager = CanaryConfigManager()
+    try:
+        updated_config = manager.update_config(
+            enabled=request.enabled,
+            mode=request.mode,
+            canary_percentage=request.canary_percentage,
+            candidate_version_id=request.candidate_version_id,
+            production_version_id=request.production_version_id,
+        )
+        return updated_config
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get(
+    "/metrics",
+    status_code=status.HTTP_200_OK,
+    summary="Get Comparative Canary & Shadow Metrics",
+    description="Returns real-time comparative performance metrics, latency p95, and prediction agreement rate for Production vs Candidate.",
+)
+def get_canary_metrics():
+    """Returns comparative metrics for Production vs Candidate models."""
+    manager = CanaryConfigManager()
+    return manager.metrics.get_summary()
+
+
+@router.post(
+    "/promote",
+    status_code=status.HTTP_200_OK,
+    summary="Promote Candidate Model to Production",
+    description="Evaluates quality gate and promotes candidate model to 100% Production status in the Model Registry.",
+)
+def promote_canary_candidate(
+    request: PromoteCanaryRequest,
+    db: Session = Depends(get_db),
+):
+    """Promotes candidate model version to PRODUCTION after quality gate check."""
+    manager = CanaryConfigManager()
+    config = manager.get_config()
+
+    cand_ver_id = request.candidate_version_id or config.candidate_version_id
+    if not cand_ver_id and not request.candidate_version:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No candidate version specified for promotion.",
+        )
+
+    registry = ModelRegistry(db)
+    model_name = request.model_name or "FraudDetector"
+
+    # Evaluate Quality Gate if not forced
+    if not request.force:
+        cand_dict = None
+        if request.candidate_version:
+            cand_dict = registry.get_model_version(model_name, request.candidate_version)
+        elif cand_ver_id:
+            mver_obj = registry.version_repo.get(cand_ver_id)
+            if mver_obj:
+                cand_dict = mver_obj.to_registry_dict()
+
+        if not cand_dict:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Candidate model version not found in registry.",
+            )
+
+        prod_dict = registry.get_production_model(model_name)
+        cand_metrics = cand_dict.get("metrics", {})
+        prod_metrics = prod_dict.get("metrics", {}) if prod_dict else None
+
+        gate = ModelQualityGate()
+        gate_res = gate.evaluate(
+            candidate_metrics=cand_metrics,
+            production_metrics=prod_metrics,
+            artifact_path=cand_dict.get("artifact_path"),
+        )
+
+        if not gate_res.passed:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "message": "MODEL PROMOTION REJECTED",
+                    "rejection_reasons": gate_res.rejection_reasons,
+                    "evaluations": gate_res.evaluations,
+                },
+            )
+
+    version_str = request.candidate_version
+    if not version_str and cand_ver_id:
+        mver_obj = registry.version_repo.get(cand_ver_id)
+        if mver_obj:
+            version_str = mver_obj.version
+
+    if not version_str:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not resolve version string for candidate.")
+
+    promoted_ver = registry.promote_model(model_name=model_name, version=version_str, target_status="PRODUCTION")
+
+    # Update canary config to 100% production (disable canary mode)
+    manager.update_config(
+        enabled=False,
+        mode="SHADOW",
+        canary_percentage=0,
+        candidate_version_id=None,
+        production_version_id=promoted_ver.get("id"),
+    )
+
+    return {
+        "status": "CANDIDATE APPROVED & PROMOTED TO PRODUCTION",
+        "model_name": model_name,
+        "promoted_version": version_str,
+        "details": promoted_ver,
+    }

@@ -183,10 +183,60 @@ class PredictionService:
         preds = (probs >= 0.5).astype(int)
         return preds, probs
 
+    def _resolve_model_by_id(self, version_id: str) -> Tuple[ModelVersion, Any, Any]:
+        """Resolves a specific ModelVersion by ID and loads its model and preprocessor artifacts."""
+        mver_obj = self.db.query(ModelVersion).filter(ModelVersion.id == version_id).first()
+        if not mver_obj:
+            raise ValueError(f"ModelVersion ID '{version_id}' not found.")
+
+        artifact_path_str = mver_obj.artifact_path or mver_obj.artifact_uri
+        cache_key = f"id:{version_id}:{artifact_path_str}"
+
+        cached = self.cache.get(cache_key)
+        if cached:
+            return mver_obj, cached[0], cached[1]
+
+        if not artifact_path_str or not os.path.exists(artifact_path_str):
+            raise FileNotFoundError(f"Artifact for version '{version_id}' not found at '{artifact_path_str}'.")
+
+        model_obj = joblib.load(artifact_path_str)
+
+        root_dir = Path(__file__).resolve().parent.parent.parent.parent
+        prep_file = Path(artifact_path_str).parent / "preprocessor.joblib"
+        if prep_file.exists():
+            try:
+                prep_obj = FeaturePreprocessor.load(str(prep_file))
+            except Exception:
+                prep_obj = joblib.load(str(prep_file))
+        else:
+            prep_file_alt = root_dir / "artifacts" / "preprocessor_v1.joblib"
+            if prep_file_alt.exists():
+                try:
+                    prep_obj = FeaturePreprocessor.load(str(prep_file_alt))
+                except Exception:
+                    prep_obj = joblib.load(str(prep_file_alt))
+            else:
+                prep_obj = None
+
+        self.cache.set(cache_key, model_obj, prep_obj)
+        return mver_obj, model_obj, prep_obj
+
     def predict_single(self, request: PredictionRequest) -> PredictionResponse:
-        """Processes a single fraud prediction request."""
+        """Processes a single fraud prediction request with Canary & Shadow routing."""
         start_time = time.perf_counter()
-        model_ver_obj, model_obj, prep_obj = self._resolve_production_model()
+
+        from ml.evaluation.canary import CanaryRouter, ShadowEvaluator, CanaryConfigManager
+        canary_router = CanaryRouter()
+        decision = canary_router.route_request()
+
+        if decision.target == "CANDIDATE" and decision.candidate_version_id:
+            try:
+                model_ver_obj, model_obj, prep_obj = self._resolve_model_by_id(decision.candidate_version_id)
+            except Exception as e:
+                logger.warning("Failed to resolve candidate model for canary, falling back to production", error=str(e))
+                model_ver_obj, model_obj, prep_obj = self._resolve_production_model()
+        else:
+            model_ver_obj, model_obj, prep_obj = self._resolve_production_model()
 
         model_name = model_ver_obj.model.name if model_ver_obj.model else "FraudDetector"
         model_version_str = model_ver_obj.version
@@ -201,6 +251,22 @@ class PredictionService:
         latency_ms = float(round((time.perf_counter() - start_time) * 1000, 2))
         prediction_id = f"pred_{uuid.uuid4().hex[:12]}"
 
+        # Record metrics and execute Shadow Evaluation if active
+        manager = CanaryConfigManager()
+        if decision.target == "CANDIDATE":
+            manager.metrics.record_candidate(latency_ms, fraud_prob)
+        else:
+            manager.metrics.record_production(latency_ms, fraud_prob)
+
+        if decision.is_shadow and decision.candidate_version_id:
+            shadow_evaluator = ShadowEvaluator(metrics=manager.metrics)
+            shadow_evaluator.evaluate_shadow_async(
+                features=features,
+                prod_prediction=pred_label,
+                prod_probability=fraud_prob,
+                candidate_version_id=decision.candidate_version_id,
+            )
+
         # Emits structured telemetry log
         logger.info(
             "prediction_executed",
@@ -210,6 +276,8 @@ class PredictionService:
             prediction=pred_label,
             fraud_probability=fraud_prob,
             latency_ms=latency_ms,
+            target=decision.target,
+            mode=decision.mode,
         )
 
         # Store metadata in DB for monitoring

@@ -181,6 +181,18 @@ class ModelRegistry:
         
         return prod_version.to_registry_dict()
 
+    def get_model_version(self, model_name: str, version: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieves model version dict representation by model_name and version string.
+        """
+        model = self.model_repo.get_by_name(model_name)
+        if not model:
+            return None
+        ver_obj = self.version_repo.get_by_model_and_version(model.id, version)
+        if not ver_obj:
+            return None
+        return ver_obj.to_registry_dict()
+
     def get_candidate_models(self, model_name: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Retrieves all model versions with status CANDIDATE.
