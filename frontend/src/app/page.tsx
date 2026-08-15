@@ -203,28 +203,54 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* Telemetry Summary Cards Row (matching the image) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Card 1: p99 Latency */}
-        <div className="bg-[#101417] border border-[#252E3B] rounded-lg p-4">
-          <span className="text-xs font-mono text-[#94a3b8] block mb-1">p99 Latency</span>
-          <span className="text-2xl font-mono font-bold text-white">14.2 ms</span>
-        </div>
-
-        {/* Card 2: Inference Rate */}
-        <div className="bg-[#101417] border border-[#252E3B] rounded-lg p-4">
-          <span className="text-xs font-mono text-[#94a3b8] block mb-1">Inference Rate</span>
-          <span className="text-2xl font-mono font-bold text-white">1,420 req/s</span>
-        </div>
-
-        {/* Card 3: Error Rate */}
-        <div className="bg-[#101417] border border-[#252E3B] rounded-lg p-4">
-          <span className="text-xs font-mono text-[#94a3b8] block mb-1">Error Rate</span>
-          <span className="text-2xl font-mono font-bold text-[#4ade80]">0.01%</span>
-        </div>
+      {/* Key Telemetry Metrics Grid (Positioned directly below Telemetry & Monitoring) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <MetricCard
+          title="Precision"
+          value="0.942"
+          change={1.2}
+          subValue="Threshold > 0.90"
+          status="good"
+        />
+        <MetricCard
+          title="Recall"
+          value={`${store.recall}%`}
+          change={-2.4}
+          subValue="SLA Target 95%"
+          status="warning"
+        />
+        <MetricCard
+          title="F1-Score"
+          value="0.940"
+          change={0.8}
+          subValue="Macro Average"
+          status="good"
+        />
+        <MetricCard
+          title="PR-AUC"
+          value={store.prAuc}
+          change={store.prAucTrend}
+          subValue="Area under PR curve"
+          highlight
+          status="good"
+        />
+        <MetricCard
+          title="Prediction Vol."
+          value="14.2k/m"
+          change={5.4}
+          subValue="Total 1.2M requests"
+          status="neutral"
+        />
+        <MetricCard
+          title="P95 Latency"
+          value="18.4ms"
+          change={-1.1}
+          subValue="SLA < 50ms"
+          status="good"
+        />
       </div>
 
-      {/* Active Model Performance Metrics Container (matching the image) */}
+      {/* Active Model Performance Metrics Container */}
       <div className="bg-[#101417] border border-[#252E3B] rounded-lg p-5 space-y-4">
         <h2 className="text-lg font-bold text-white tracking-tight">Active Model Performance Metrics</h2>
 
@@ -285,54 +311,6 @@ export default function DashboardPage() {
             <span className="text-xs font-mono text-[#94a3b8]">Active RCA Alerts</span>
           </div>
         </div>
-      </div>
-
-
-      {/* Key Metrics Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <MetricCard
-          title="Precision"
-          value="0.942"
-          change={1.2}
-          subValue="Threshold > 0.90"
-          status="good"
-        />
-        <MetricCard
-          title="Recall"
-          value={`${store.recall}%`}
-          change={-2.4}
-          subValue="SLA Target 95%"
-          status="warning"
-        />
-        <MetricCard
-          title="F1-Score"
-          value="0.940"
-          change={0.8}
-          subValue="Macro Average"
-          status="good"
-        />
-        <MetricCard
-          title="PR-AUC"
-          value={store.prAuc}
-          change={store.prAucTrend}
-          subValue="Area under PR curve"
-          highlight
-          status="good"
-        />
-        <MetricCard
-          title="Prediction Vol."
-          value="14.2k/m"
-          change={5.4}
-          subValue="Total 1.2M requests"
-          status="neutral"
-        />
-        <MetricCard
-          title="P95 Latency"
-          value="18.4ms"
-          change={-1.1}
-          subValue="SLA < 50ms"
-          status="good"
-        />
       </div>
 
       {/* Recharts Row 1: Model Performance Over Time & Prediction Distribution */}
