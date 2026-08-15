@@ -1,504 +1,830 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import {
+  Shield,
+  ArrowRight,
+  Terminal,
+  Copy,
+  Check,
+  CheckCircle2,
+  ExternalLink,
   Activity,
   Zap,
-  Shield,
-  Cpu,
-  AlertTriangle,
-  Clock,
-  TrendingUp,
-  BarChart3,
-  GitCommit,
   RotateCcw,
-  CheckCircle2,
-  RefreshCw,
+  Star,
+  Lock,
+  Cloud,
+  Cpu,
+  Layers,
+  Sparkles,
+  Sliders,
+  ChevronRight,
 } from 'lucide-react';
-
-import {
-  MetricCard,
-  StatusBadge,
-  SeverityBadge,
-  ModelBadge,
-  ChartCard,
-  DataTable,
-  Timeline,
-  AlertBanner,
-} from '@/components/ui';
-import { InjectDriftModal } from '@/components/dashboard/InjectDriftModal';
-import { useSentinelStore } from '@/store/useSentinelStore';
-import { useWebSocket } from '@/hooks/useWebSocket';
-import { apiClient } from '@/services/api';
-
 import {
   ResponsiveContainer,
   AreaChart,
   Area,
-  LineChart,
   Line,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
-  Legend,
-  ReferenceLine,
 } from 'recharts';
 
-// Mock historical time series data for Recharts
-const PERFORMANCE_TIME_SERIES = [
-  { time: '00:00', prAuc: 0.96, recall: 0.94, f1: 0.93, precision: 0.95 },
-  { time: '04:00', prAuc: 0.95, recall: 0.93, f1: 0.92, precision: 0.94 },
-  { time: '08:00', prAuc: 0.96, recall: 0.95, f1: 0.94, precision: 0.96 },
-  { time: '12:00', prAuc: 0.91, recall: 0.88, f1: 0.86, precision: 0.89 },
-  { time: '16:00', prAuc: 0.88, recall: 0.85, f1: 0.83, precision: 0.86 },
-  { time: '20:00', prAuc: 0.93, recall: 0.91, f1: 0.90, precision: 0.92 },
-  { time: '24:00', prAuc: 0.95, recall: 0.94, f1: 0.93, precision: 0.95 },
+const TICKER_TEXTS = [
+  "SentinelML v2.4 Released: Autonomous Concept Drift Engine & DVC 3.0 Integration →",
+  "Real-time Self-Healing: Retraining Worker #3 Active",
+  "Zero SLA Breach: 99.98% Prediction Accuracy Maintained",
+  "New Integration: DVC 3.0 & MLflow Support",
 ];
 
-const DRIFT_SCORE_SERIES = [
-  { time: '00:00', transaction_amount: 0.08, device_type: 0.05, ip_risk: 0.04, threshold: 0.2 },
-  { time: '04:00', transaction_amount: 0.11, device_type: 0.07, ip_risk: 0.05, threshold: 0.2 },
-  { time: '08:00', transaction_amount: 0.14, device_type: 0.09, ip_risk: 0.06, threshold: 0.2 },
-  { time: '12:00', transaction_amount: 0.29, device_type: 0.18, ip_risk: 0.11, threshold: 0.2 },
-  { time: '16:00', transaction_amount: 0.36, device_type: 0.22, ip_risk: 0.14, threshold: 0.2 },
-  { time: '20:00', transaction_amount: 0.21, device_type: 0.14, ip_risk: 0.08, threshold: 0.2 },
-  { time: '24:00', transaction_amount: 0.12, device_type: 0.08, ip_risk: 0.05, threshold: 0.2 },
+const HERO_CHART_DATA = [
+  { time: '01', precision: 0.95, recall: 0.92, prAuc: 0.97 },
+  { time: '02', precision: 0.96, recall: 0.93, prAuc: 0.96 },
+  { time: '03', precision: 0.94, recall: 0.91, prAuc: 0.95 },
+  { time: '04', precision: 0.97, recall: 0.94, prAuc: 0.98 },
+  { time: '05', precision: 0.95, recall: 0.93, prAuc: 0.96 },
+  { time: '06', precision: 0.98, recall: 0.95, prAuc: 0.98 },
+  { time: '07', precision: 0.96, recall: 0.92, prAuc: 0.97 },
+  { time: '08', precision: 0.97, recall: 0.94, prAuc: 0.98 },
+  { time: '09', precision: 0.95, recall: 0.93, prAuc: 0.96 },
+  { time: '10', precision: 0.98, recall: 0.95, prAuc: 0.99 },
 ];
 
-const PREDICTION_DISTRIBUTION_DATA = [
-  { bin: '0.0-0.2 (Legit)', count: 12450, color: '#10b981' },
-  { bin: '0.2-0.4 (Low Risk)', count: 3200, color: '#0ea5e9' },
-  { bin: '0.4-0.6 (Medium)', count: 850, color: '#f59e0b' },
-  { bin: '0.6-0.8 (High Risk)', count: 420, color: '#f97316' },
-  { bin: '0.8-1.0 (Fraud)', count: 180, color: '#ef4444' },
-];
+export default function LandingPage() {
+  // Ticker animation state
+  const [tickerIndex, setTickerIndex] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTickerIndex((prev) => (prev + 1) % TICKER_TEXTS.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
-const VOLUME_LATENCY_SERIES = [
-  { time: '00:00', volume: 14200, latencyP95: 16.2 },
-  { time: '04:00', volume: 11800, latencyP95: 15.8 },
-  { time: '08:00', volume: 18900, latencyP95: 19.4 },
-  { time: '12:00', volume: 24500, latencyP95: 24.1 },
-  { time: '16:00', volume: 22100, latencyP95: 21.5 },
-  { time: '20:00', volume: 17600, latencyP95: 18.0 },
-  { time: '24:00', volume: 15400, latencyP95: 16.9 },
-];
-
-export default function DashboardPage() {
-  const queryClient = useQueryClient();
-  const [timeRange, setTimeRange] = useState('Last 24h');
-  const [isDriftModalOpen, setIsDriftModalOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const { isConnected, lastEvent } = useWebSocket();
-  const store = useSentinelStore();
-
-  // Fetch real-time health data using TanStack Query
-  const { data: healthData, refetch: refetchHealth } = useQuery({
-    queryKey: ['systemHealth'],
-    queryFn: async () => {
-      try {
-        const res = await apiClient.get('/health');
-        return res.data;
-      } catch (err) {
-        return { status: 'healthy', version: '1.0.0' };
-      }
-    },
-    refetchInterval: 10000,
-  });
-
-  // Fetch active models using TanStack Query
-  const { data: modelsData } = useQuery({
-    queryKey: ['modelsList'],
-    queryFn: async () => {
-      try {
-        const res = await apiClient.get('/models');
-        return res.data;
-      } catch (err) {
-        return store.models;
-      }
-    },
-  });
-
-  // Handle WebSocket event broadcasts
-  React.useEffect(() => {
-    if (lastEvent) {
-      console.log('[Dashboard] WebSocket event received:', lastEvent);
-      if (lastEvent.event_type === 'DRIFT_DETECTED') {
-        setToastMessage(`DRIFT DETECTED: ${lastEvent.payload?.drift_type || 'Data drift'} threshold exceeded!`);
-        queryClient.invalidateQueries({ queryKey: ['systemHealth'] });
-      } else if (lastEvent.event_type === 'RETRAINING_STARTED') {
-        setToastMessage(`RETRAINING STARTED: Self-healing pipeline initiated for run ${lastEvent.payload?.run_id}`);
-      } else if (lastEvent.event_type === 'MODEL_PROMOTED') {
-        setToastMessage(`MODEL PROMOTED: Version ${lastEvent.payload?.version_str} is now PRODUCTION.`);
-        queryClient.invalidateQueries({ queryKey: ['modelsList'] });
-      }
-    }
-  }, [lastEvent, queryClient]);
-
-  const handleDriftSuccess = (details: any) => {
-    setToastMessage(`Synthetic drift scenario '${details.scenario || 'MULTI_FEATURE_DRIFT'}' injected successfully!`);
-    queryClient.invalidateQueries({ queryKey: ['systemHealth'] });
-    setTimeout(() => setToastMessage(null), 6000);
+  // Copy command state
+  const [copied, setCopied] = useState(false);
+  const handleCopyCommand = () => {
+    navigator.clipboard.writeText('pip install sentinel-ml');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  const isSystemHealthy = store.modelHealth > 75;
+  // Comparison slider interactive state
+  const [sliderPercentage, setSliderPercentage] = useState(50);
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+
+  const handleSliderMove = (clientX: number) => {
+    if (!sliderRef.current) return;
+    const rect = sliderRef.current.getBoundingClientRect();
+    let percentage = ((clientX - rect.left) / rect.width) * 100;
+    percentage = Math.max(0, Math.min(100, percentage));
+    setSliderPercentage(percentage);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    isDraggingRef.current = true;
+    handleSliderMove(e.clientX);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDraggingRef.current) {
+      handleSliderMove(e.clientX);
+    }
+  };
+
+  const handleMouseUp = () => {
+    isDraggingRef.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length > 0) {
+      handleSliderMove(e.touches[0].clientX);
+    }
+  };
 
   return (
-    <main className="p-6 md:p-8 flex-1 overflow-y-auto bg-[#101417] text-slate-100 w-full h-full space-y-6">
-      {/* Top Header & Telemetry Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#252E3B] pb-5">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
-            Telemetry & Monitoring
-          </h1>
-          <p className="text-xs font-mono text-[#94a3b8] mt-1">
-            Live latency, throughput, prediction distribution, and hardware metrics.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Real-time WebSocket connection status */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#101417] border border-[#252E3B] font-mono text-xs text-[#94a3b8]">
-            <span
-              className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
-                }`}
-            />
-            <span>{isConnected ? 'WS Live Stream' : 'WS Reconnecting'}</span>
-          </div>
-
-          {/* Time Range Selector */}
-          <select
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            className="bg-[#101417] border border-[#252E3B] rounded-lg px-3 py-1.5 font-mono text-xs text-slate-200 focus:outline-none focus:border-purple-500"
-          >
-            <option value="Last 1h">Last 1h</option>
-            <option value="Last 24h">Last 24h</option>
-            <option value="Last 7d">Last 7d</option>
-            <option value="Last 30d">Last 30d</option>
-          </select>
-
-          {/* INJECT DRIFT BUTTON */}
-          <button
-            onClick={() => setIsDriftModalOpen(true)}
-            className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold font-mono text-xs rounded-lg shadow-md flex items-center gap-2 transition-all"
-          >
-            <Zap className="w-4 h-4 fill-slate-950" />
-            INJECT DRIFT
-          </button>
-        </div>
-      </div>
-
-      {/* Toast Alert Banner */}
-      {toastMessage && (
-        <AlertBanner
-          type="warning"
-          title="Operational Telemetry Notice"
-          message={toastMessage}
-          onClose={() => setToastMessage(null)}
-        />
-      )}
-
-      {/* Key Telemetry Metrics Grid (Positioned directly below Telemetry & Monitoring) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <MetricCard
-          title="Precision"
-          value="0.942"
-          change={1.2}
-          subValue="Threshold > 0.90"
-          status="good"
-        />
-        <MetricCard
-          title="Recall"
-          value={`${store.recall}%`}
-          change={-2.4}
-          subValue="SLA Target 95%"
-          status="warning"
-        />
-        <MetricCard
-          title="F1-Score"
-          value="0.940"
-          change={0.8}
-          subValue="Macro Average"
-          status="good"
-        />
-        <MetricCard
-          title="PR-AUC"
-          value={store.prAuc}
-          change={store.prAucTrend}
-          subValue="Area under PR curve"
-          highlight
-          status="good"
-        />
-        <MetricCard
-          title="Prediction Vol."
-          value="14.2k/m"
-          change={5.4}
-          subValue="Total 1.2M requests"
-          status="neutral"
-        />
-        <MetricCard
-          title="P95 Latency"
-          value="18.4ms"
-          change={-1.1}
-          subValue="SLA < 50ms"
-          status="good"
-        />
-      </div>
-
-      {/* Active Model Performance Metrics Container */}
-      <div className="bg-[#101417] border border-[#252E3B] rounded-lg p-5 space-y-4">
-        <h2 className="text-lg font-bold text-white tracking-tight">Active Model Performance Metrics</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Inner Card 1: Model */}
-          <div className="bg-[#101417] border border-[#252E3B] rounded-md p-4">
-            <span className="text-xs font-mono text-[#94a3b8] block mb-1">Model:</span>
-            <span className="text-base font-mono font-bold text-white">{store.activeModelName} {store.activeModelVersion}</span>
-          </div>
-
-          {/* Inner Card 2: PR-AUC / Recall */}
-          <div className="bg-[#101417] border border-[#252E3B] rounded-md p-4">
-            <span className="text-xs font-mono text-[#94a3b8] block mb-1">PR-AUC / Recall:</span>
-            <span className="text-base font-mono font-bold text-white">{store.prAuc} / {store.recall}%</span>
-          </div>
-        </div>
-      </div>
-
-      {/* High-Level Status Row */}
-      <div className="bg-[#101417] border border-[#252E3B] rounded-lg p-4 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-        {/* Model Health Score */}
-        <div className="border-r border-[#252E3B] pr-4">
-          <span className="text-xs font-mono text-[#94a3b8]">Model Health Score</span>
-          <div className="flex items-baseline gap-2 mt-0.5">
-            <span
-              className={`text-2xl font-bold font-mono ${store.modelHealth > 80 ? 'text-[#4ade80]' : 'text-amber-400'
-                }`}
+    <div
+      className="bg-[#0B0E14] text-[#E2E8F0] font-sans antialiased min-h-screen selection:bg-purple-500 selection:text-white"
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+    >
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4 flex items-center justify-between bg-[#0B0E14]/80 backdrop-blur-md border-b border-[#232D3F]">
+        <div className="flex items-center space-x-8">
+          <Link href="/" className="flex items-center space-x-2 group">
+            <Shield className="w-6 h-6 text-[#A855F7] group-hover:scale-110 transition-transform" />
+            <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-[#A855F7] to-[#10B981] bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]">
+              SentinelML
+            </span>
+          </Link>
+          <div className="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-400">
+            <a href="#features" className="hover:text-white transition-colors">
+              Features
+            </a>
+            <a href="#architecture" className="hover:text-white transition-colors">
+              Architecture
+            </a>
+            <a href="#demo" className="hover:text-white transition-colors">
+              Demo
+            </a>
+            <a href="#docs" className="hover:text-white transition-colors">
+              Docs
+            </a>
+            <a
+              href="https://github.com/harnishndangi/sentinal-ai"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-white transition-colors flex items-center space-x-1.5"
             >
-              {store.modelHealth}%
-            </span>
-            <span className="text-xs font-mono text-[#94a3b8]">
-              {store.healthTrend > 0 ? `+${store.healthTrend}%` : `${store.healthTrend}%`}
-            </span>
-          </div>
-        </div>
-
-        {/* Data Drift Status */}
-        <div className="border-r border-[#252E3B] pr-4">
-          <span className="text-xs font-mono text-[#94a3b8]">Data Drift Status</span>
-          <div className="mt-1">
-            <StatusBadge status={store.dataDriftLevel === 'High' ? 'DEGRADED' : 'HEALTHY'} />
-          </div>
-        </div>
-
-        {/* Concept Drift Status */}
-        <div className="border-r border-[#252E3B] pr-4">
-          <span className="text-xs font-mono text-[#94a3b8]">Concept Drift Status</span>
-          <div className="mt-1">
-            <StatusBadge status={store.predictionDriftLevel === 'High' ? 'CRITICAL' : 'HEALTHY'} />
-          </div>
-        </div>
-
-        {/* Open Incidents */}
-        <div>
-          <span className="text-xs font-mono text-[#94a3b8]">Open Incidents</span>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-2xl font-bold font-mono text-rose-400">{store.openIncidentsCount}</span>
-            <span className="text-xs font-mono text-[#94a3b8]">Active RCA Alerts</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Recharts Row 1: Model Performance Over Time & Prediction Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Chart 1: Model Performance Over Time */}
-        <ChartCard
-          title="Model Performance Over Time"
-          subtitle="Real-time precision, recall, F1, and PR-AUC metric trajectories"
-          actions={
-            <span className="text-xs font-mono text-purple-400 bg-purple-950/40 px-2 py-1 rounded border border-purple-800/40">
-              PR-AUC Target: 0.95
-            </span>
-          }
-        >
-          <ResponsiveContainer width="100%" height={260}>
-            <AreaChart data={PERFORMANCE_TIME_SERIES}>
-              <defs>
-                <linearGradient id="prAucGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#a855f7" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#a855f7" stopOpacity={0.0} />
-                </linearGradient>
-                <linearGradient id="recallGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#38bdf8" stopOpacity={0.0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis dataKey="time" stroke="#64748b" tick={{ fontSize: 11, fontFamily: 'monospace' }} />
-              <YAxis domain={[0.8, 1.0]} stroke="#64748b" tick={{ fontSize: 11, fontFamily: 'monospace' }} />
-              <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: 8, fontSize: 12 }} />
-              <Legend wrapperStyle={{ fontSize: 11, fontFamily: 'monospace' }} />
-              <Area type="monotone" dataKey="prAuc" name="PR-AUC" stroke="#a855f7" fillOpacity={1} fill="url(#prAucGradient)" strokeWidth={2} />
-              <Area type="monotone" dataKey="recall" name="Recall" stroke="#38bdf8" fillOpacity={1} fill="url(#recallGradient)" strokeWidth={2} />
-              <Line type="monotone" dataKey="f1" name="F1-Score" stroke="#34d399" strokeWidth={2} dot={false} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
-        {/* Chart 2: Prediction Probability Distribution */}
-        <ChartCard
-          title="Prediction Probability Distribution"
-          subtitle="Inference score distribution across probability buckets"
-          actions={
-            <span className="text-xs font-mono text-emerald-400 bg-emerald-950/40 px-2 py-1 rounded border border-emerald-800/40">
-              Fraud Ratio: 1.2%
-            </span>
-          }
-        >
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={PREDICTION_DISTRIBUTION_DATA}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis dataKey="bin" stroke="#64748b" tick={{ fontSize: 10, fontFamily: 'monospace' }} />
-              <YAxis stroke="#64748b" tick={{ fontSize: 11, fontFamily: 'monospace' }} />
-              <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: 8, fontSize: 12 }} />
-              <Bar dataKey="count" name="Transaction Count" fill="#a855f7" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </div>
-
-      {/* Recharts Row 2: Drift Score Over Time & Prediction Volume/Latency */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Chart 3: Drift Score Over Time */}
-        <ChartCard
-          title="Feature & Concept Drift Score Over Time"
-          subtitle="Kolmogorov-Smirnov & PSI statistical drift distance metrics"
-          actions={
-            <span className="text-xs font-mono text-amber-400 bg-amber-950/40 px-2 py-1 rounded border border-amber-800/40">
-              PSI Threshold: 0.20
-            </span>
-          }
-        >
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={DRIFT_SCORE_SERIES}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis dataKey="time" stroke="#64748b" tick={{ fontSize: 11, fontFamily: 'monospace' }} />
-              <YAxis domain={[0.0, 0.5]} stroke="#64748b" tick={{ fontSize: 11, fontFamily: 'monospace' }} />
-              <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: 8, fontSize: 12 }} />
-              <Legend wrapperStyle={{ fontSize: 11, fontFamily: 'monospace' }} />
-              <ReferenceLine y={0.2} label={{ value: 'Drift Threshold (0.2)', fill: '#f59e0b', fontSize: 10 }} stroke="#f59e0b" strokeDasharray="4 4" />
-              <Line type="monotone" dataKey="transaction_amount" name="transaction_amount" stroke="#f59e0b" strokeWidth={2.5} />
-              <Line type="monotone" dataKey="device_type" name="device_type" stroke="#38bdf8" strokeWidth={2} />
-              <Line type="monotone" dataKey="ip_risk" name="ip_risk_score" stroke="#34d399" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
-        {/* Chart 4: Prediction Volume & Latency */}
-        <ChartCard
-          title="Prediction Volume & P95 Latency"
-          subtitle="Throughput volume and 95th percentile inference latency"
-          actions={
-            <span className="text-xs font-mono text-sky-400 bg-sky-950/40 px-2 py-1 rounded border border-sky-800/40">
-              Avg Latency: 18.2ms
-            </span>
-          }
-        >
-          <ResponsiveContainer width="100%" height={260}>
-            <AreaChart data={VOLUME_LATENCY_SERIES}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis dataKey="time" stroke="#64748b" tick={{ fontSize: 11, fontFamily: 'monospace' }} />
-              <YAxis yAxisId="left" stroke="#64748b" tick={{ fontSize: 11, fontFamily: 'monospace' }} />
-              <YAxis yAxisId="right" orientation="right" stroke="#64748b" tick={{ fontSize: 11, fontFamily: 'monospace' }} />
-              <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: 8, fontSize: 12 }} />
-              <Legend wrapperStyle={{ fontSize: 11, fontFamily: 'monospace' }} />
-              <Area yAxisId="left" type="monotone" dataKey="volume" name="Volume (req/h)" fill="#3b82f6" fillOpacity={0.2} stroke="#3b82f6" strokeWidth={2} />
-              <Line yAxisId="right" type="monotone" dataKey="latencyP95" name="P95 Latency (ms)" stroke="#f43f5e" strokeWidth={2} dot={false} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </div>
-
-      {/* Operations Row: Recent Incidents & Retraining/Deployment Timeline */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Column 1 & 2: Recent Incidents Table */}
-        <div className="lg:col-span-2 bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-lg flex flex-col">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
-            <div>
-              <h3 className="text-sm font-semibold text-white tracking-tight">Recent Operational Incidents</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Active drift and performance alerts requiring root cause analysis</p>
-            </div>
-            <a href="/incidents" className="text-xs font-mono text-purple-400 hover:text-purple-300 font-semibold">
-              View All Incidents →
+              <span>GitHub</span>
+              <span className="bg-white/10 px-1.5 py-0.5 rounded text-xs text-amber-300 font-mono">
+                ★ 4.8k
+              </span>
             </a>
           </div>
-
-          <DataTable
-            columns={[
-              {
-                key: 'title',
-                header: 'Incident Title',
-                render: (inc: any) => (
-                  <div className="max-w-xs">
-                    <p className="font-semibold text-slate-200 truncate">{inc.title}</p>
-                    <p className="text-[11px] text-slate-500 font-mono">{inc.id} • {inc.createdAt}</p>
-                  </div>
-                ),
-              },
-              {
-                key: 'affectedModel',
-                header: 'Model Version',
-                render: (inc: any) => <ModelBadge modelName="FraudDetector" version={inc.affectedModel?.split(' ')[1] || 'v1.0.0'} />,
-              },
-              {
-                key: 'severity',
-                header: 'Severity',
-                render: (inc: any) => <SeverityBadge severity={inc.severity} size="sm" />,
-              },
-              {
-                key: 'status',
-                header: 'Status',
-                render: (inc: any) => <StatusBadge status={inc.status} size="sm" />,
-              },
-            ]}
-            data={store.incidents}
-            keyExtractor={(inc: any) => inc.id}
-          />
         </div>
+        <div className="flex items-center space-x-4">
+          <Link
+            href="/dashboard"
+            className="hidden md:block text-sm font-medium text-slate-400 hover:text-white transition-colors"
+          >
+            Sign In
+          </Link>
+          <Link
+            href="/dashboard"
+            className="bg-gradient-to-r from-[#A855F7] to-[#10B981] hover:opacity-90 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all transform hover:scale-105 shadow-[0_0_20px_rgba(168,85,247,0.4)] flex items-center gap-2"
+          >
+            <span>Launch Dashboard</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </nav>
 
-        {/* Column 3: Self-Healing & Deployment Timeline */}
-        <div className="bg-[#101417] border border-[#252E3B] rounded-lg p-5 flex flex-col">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#252E3B]">
-            <div>
-              <h3 className="text-sm font-semibold text-white tracking-tight">Self-Healing Activity Feed</h3>
-              <p className="text-xs text-[#94a3b8] font-mono mt-0.5">Automated retraining & canary deployment timeline</p>
+      {/* Hero Section */}
+      <main className="pt-32 pb-20 px-6 relative min-h-[900px] flex flex-col justify-center bg-[radial-gradient(#232D3F_1px,transparent_1px)] [background-size:40px_40px]">
+        {/* Radial Glow Overlays */}
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#A855F7]/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-[#10B981]/10 rounded-full blur-[120px] pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-12 items-center relative z-10">
+          <div className="space-y-8">
+            <div className="flex items-center space-x-3 text-[10px] font-mono text-slate-400 uppercase tracking-[0.2em]">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#A855F7] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#A855F7]" />
+              </span>
+              <span className="font-bold border-r-2 border-[#A855F7] pr-1.5 text-slate-200">
+                {TICKER_TEXTS[tickerIndex]}
+              </span>
             </div>
-            <RotateCcw className="w-4 h-4 text-purple-400" />
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-[0.95] tracking-tight text-white">
+              Autonomous
+              <br />
+              ML Reliability
+              <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#A855F7] via-purple-400 to-[#10B981] drop-shadow-[0_0_30px_rgba(168,85,247,0.3)]">
+                AI Engine
+              </span>
+            </h1>
+            <p className="text-lg text-slate-400 max-w-xl leading-relaxed">
+              Stop silent model degradation. SentinelML continuously monitors production features, detects data drift in milliseconds, and automatically retrains & hot-swaps degraded models before SLAs fail.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-4">
+              <Link
+                href="/dashboard"
+                className="bg-gradient-to-r from-[#A855F7] to-[#10B981] text-white px-6 py-3.5 rounded-lg font-medium hover:opacity-90 transition-all flex items-center space-x-2 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+              >
+                <span>Launch Live Sandbox</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+
+              {/* Pip Install Command Box */}
+              <div className="flex items-center space-x-3 bg-[#131822] border border-[#232D3F] rounded-lg p-1.5 pl-4 font-mono text-sm text-slate-300">
+                <span className="text-[#10B981] font-bold">$</span>
+                <span>pip install sentinel-ml</span>
+                <button
+                  onClick={handleCopyCommand}
+                  className="bg-white/5 hover:bg-white/10 p-2 rounded transition-colors text-slate-300 hover:text-white"
+                  title="Copy command"
+                >
+                  {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
           </div>
 
+          {/* Hero Widget: Live Telemetry Dashboard */}
+          <div className="relative">
+            <div className="bg-[#131822]/80 backdrop-blur-xl border border-[#232D3F] rounded-2xl p-6 shadow-2xl relative z-10">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-col">
+                  <h3 className="font-bold text-lg text-white">FraudDetector-v2.4</h3>
+                  <div className="text-[10px] font-mono text-slate-500 uppercase">
+                    Production Cluster: us-east-1
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2 px-3 py-1 bg-[#10B981]/10 border border-[#10B981]/20 rounded-full text-xs text-[#10B981]">
+                  <span className="w-1.5 h-1.5 bg-[#10B981] rounded-full animate-pulse" />
+                  <span className="font-bold">HEALTHY 98.4%</span>
+                </div>
+              </div>
 
-          <Timeline
-            events={store.recoveryActivities.map((act) => ({
-              id: act.id,
-              title: act.title,
-              timestamp: act.timeAgo,
-              status: act.status as any,
-              tag: act.isCurrent ? 'ACTIVE FLOW' : undefined,
-            }))}
-          />
+              {/* Recharts Hero Chart */}
+              <div className="h-48 bg-[#0B0E14]/50 rounded-xl mb-6 relative overflow-hidden border border-[#232D3F] p-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={HERO_CHART_DATA}>
+                    <defs>
+                      <linearGradient id="heroGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#A855F7" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#A855F7" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="time" hide />
+                    <YAxis domain={[0.85, 1.05]} hide />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#0B0E14',
+                        borderColor: '#232D3F',
+                        fontSize: '11px',
+                        fontFamily: 'monospace',
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="precision"
+                      stroke="#A855F7"
+                      fill="url(#heroGradient)"
+                      strokeWidth={2}
+                    />
+                    <Line type="monotone" dataKey="recall" stroke="#10B981" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="prAuc" stroke="#F59E0B" strokeWidth={1} strokeDasharray="3 3" dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+                <div className="absolute top-2 right-2 bg-[#0B0E14]/80 backdrop-blur px-2 py-1 rounded text-[10px] font-mono text-slate-400 border border-[#232D3F]">
+                  Precision / Recall / PR-AUC
+                </div>
+              </div>
+
+              {/* Telemetry Readouts */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-[#0B0E14] rounded-lg p-4 border border-[#232D3F] relative overflow-hidden">
+                  <div className="text-[10px] font-mono text-slate-500 uppercase mb-1">
+                    KS-Test Drift
+                  </div>
+                  <div className="text-2xl font-bold text-[#F59E0B] font-mono">0.04</div>
+                  <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full bg-[#F59E0B] w-[15%] shadow-[0_0_10px_#F59E0B]" />
+                  </div>
+                </div>
+                <div className="bg-[#0B0E14] rounded-lg p-4 border border-[#232D3F] relative overflow-hidden">
+                  <div className="text-[10px] font-mono text-slate-500 uppercase mb-1">
+                    PSI Index
+                  </div>
+                  <div className="text-2xl font-bold text-[#10B981] font-mono">0.08</div>
+                  <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full bg-[#10B981] w-[20%] shadow-[0_0_10px_#10B981]" />
+                  </div>
+                </div>
+              </div>
+
+              {/* System Event Stream */}
+              <div className="mt-4 bg-black/40 rounded-lg p-3 border border-[#232D3F] font-mono text-[10px] h-28 overflow-hidden">
+                <div className="flex justify-between text-slate-600 mb-2 border-b border-[#232D3F] pb-1">
+                  <span>SYSTEM EVENT LOG</span>
+                  <span className="text-emerald-400 animate-pulse">REC ●</span>
+                </div>
+                <div className="text-[#10B981] mb-1">04:11:45 AM - Checking threshold drift: OK (0.04)</div>
+                <div className="text-[#F59E0B] mb-1">04:12:01 AM - Concept Drift Detected in `transaction_amount`</div>
+                <div className="text-slate-200 mb-1">04:12:02 AM - Retraining Worker #3 Triggered (via DVC/MLflow)</div>
+                <div className="text-[#10B981] opacity-70">04:12:05 AM - Syncing weights to production cluster...</div>
+              </div>
+            </div>
+
+            {/* Ambient Glow */}
+            <div className="absolute -inset-10 bg-[#A855F7]/20 rounded-full blur-[100px] -z-10" />
+          </div>
         </div>
-      </div>
+      </main>
 
-      {/* Inject Drift Modal */}
-      <InjectDriftModal
-        isOpen={isDriftModalOpen}
-        onClose={() => setIsDriftModalOpen(false)}
-        onSuccess={handleDriftSuccess}
-      />
-    </main>
+      {/* Trust Band */}
+      <section className="py-20 px-6 border-t border-[#232D3F] bg-[#131822]">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-16">
+            <div>
+              <div className="text-5xl font-bold tracking-tight text-white font-mono">99.99%</div>
+              <div className="text-xs text-slate-500 mt-2 uppercase tracking-widest font-mono">Uptime SLA</div>
+            </div>
+            <div>
+              <div className="text-5xl font-bold tracking-tight text-white font-mono">&lt;50ms</div>
+              <div className="text-xs text-slate-500 mt-2 uppercase tracking-widest font-mono">Drift Latency</div>
+            </div>
+            <div>
+              <div className="text-5xl font-bold tracking-tight text-white font-mono">10x</div>
+              <div className="text-xs text-slate-500 mt-2 uppercase tracking-widest font-mono">MTTR Speedup</div>
+            </div>
+            <div>
+              <div className="text-5xl font-bold tracking-tight text-white font-mono">5M+</div>
+              <div className="text-xs text-slate-500 mt-2 uppercase tracking-widest font-mono">Daily Inferences</div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap justify-center items-center gap-12 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+            <img
+              src="https://storage.googleapis.com/uxpilot-dev.appspot.com/default-org-id-2/91e93f07-4c1b-403d-975a-706229658199/1759152047298.png"
+              alt="Client Logo 1"
+              className="h-8 object-contain"
+            />
+            <img
+              src="https://storage.googleapis.com/uxpilot-dev.appspot.com/default-org-id-2/91e93f07-4c1b-403d-975a-706229658199/1759152047299.png"
+              alt="Client Logo 2"
+              className="h-8 object-contain"
+            />
+            <img
+              src="https://storage.googleapis.com/uxpilot-dev.appspot.com/default-org-id-2/91e93f07-4c1b-403d-975a-706229658199/1759152047300.png"
+              alt="Client Logo 3"
+              className="h-8 object-contain"
+            />
+            <img
+              src="https://storage.googleapis.com/uxpilot-dev.appspot.com/default-org-id-2/91e93f07-4c1b-403d-975a-706229658199/1759152047301.png"
+              alt="Client Logo 4"
+              className="h-8 object-contain"
+            />
+            <img
+              src="https://storage.googleapis.com/uxpilot-dev.appspot.com/default-org-id-2/91e93f07-4c1b-403d-975a-706229658199/1759152047302.png"
+              alt="Client Logo 5"
+              className="h-8 object-contain"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Core Architecture Grid */}
+      <section id="features" className="py-24 px-6 border-t border-[#232D3F]">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-12">
+            <h2 className="text-4xl font-bold tracking-tight text-white mb-4">
+              The 4 Pillars of
+              <br />
+              Autonomous Reliability
+            </h2>
+            <p className="text-slate-400 max-w-2xl text-base">
+              A closed-loop system that observes, diagnoses, and repairs your ML infrastructure without human intervention.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="group cursor-pointer">
+              <div className="h-64 rounded-2xl overflow-hidden mb-4 bg-[#131822] border border-[#232D3F]">
+                <img
+                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500 group-hover:scale-105"
+                  src="https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_f9a1d1f37d_90e18a71d7d75d8a.png"
+                  alt="Real-time Drift Engine"
+                />
+              </div>
+              <h3 className="font-bold text-lg text-white mb-2">Real-Time Drift Engine</h3>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                Statistical KS-tests and PSI monitors running at inference speed.
+              </p>
+            </div>
+
+            <div className="group cursor-pointer">
+              <div className="h-64 rounded-2xl overflow-hidden mb-4 bg-[#131822] border border-[#232D3F]">
+                <img
+                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500 group-hover:scale-105"
+                  src="https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_2f0c10a19b_42ca58fc8ef32323.png"
+                  alt="Self-Healing Pipelines"
+                />
+              </div>
+              <h3 className="font-bold text-lg text-white mb-2">Self-Healing Pipelines</h3>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                Automated rollback and retraining triggered by anomaly thresholds.
+              </p>
+            </div>
+
+            <div className="group cursor-pointer">
+              <div className="h-64 rounded-2xl overflow-hidden mb-4 bg-[#131822] border border-[#232D3F]">
+                <img
+                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500 group-hover:scale-105"
+                  src="https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_8ee26f2f1b_d99357250d05d778.png"
+                  alt="Root Cause Analysis"
+                />
+              </div>
+              <h3 className="font-bold text-lg text-white mb-2">Root Cause Analysis</h3>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                Feature-attribution pinpoints exactly which input caused degradation.
+              </p>
+            </div>
+
+            <div className="group cursor-pointer">
+              <div className="h-64 rounded-2xl overflow-hidden mb-4 bg-[#131822] border border-[#232D3F]">
+                <img
+                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500 group-hover:scale-105"
+                  src="https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_2f936216c4_bbf06d6d41d24cb3.png"
+                  alt="Zero-Downtime Hot-Swapping"
+                />
+              </div>
+              <h3 className="font-bold text-lg text-white mb-2">Zero-Downtime Hot-Swapping</h3>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                Seamless model promotion with canary validation and shadow traffic.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Before vs After Comparison */}
+      <section id="demo" className="py-24 px-6 bg-[#131822] border-y border-[#232D3F]">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div className="space-y-8">
+              <h2 className="text-4xl font-bold tracking-tight text-white">
+                From Silent Failure
+                <br />
+                to <span className="text-[#A855F7]">Automated Recovery</span>
+              </h2>
+              <p className="text-slate-400 leading-relaxed text-base">
+                Without SentinelML, a drifting model degrades silently until customers notice. With it, the same event triggers instant detection, diagnosis, and a fresh model deployment—all before a single user is impacted.
+              </p>
+              <ul className="space-y-4">
+                <li className="flex items-start space-x-3">
+                  <CheckCircle2 className="w-5 h-5 text-[#10B981] mt-0.5 shrink-0" />
+                  <span className="text-sm text-slate-300">Detect concept drift within seconds of occurrence</span>
+                </li>
+                <li className="flex items-start space-x-3">
+                  <CheckCircle2 className="w-5 h-5 text-[#10B981] mt-0.5 shrink-0" />
+                  <span className="text-sm text-slate-300">Auto-trigger retraining pipelines on degraded metrics</span>
+                </li>
+                <li className="flex items-start space-x-3">
+                  <CheckCircle2 className="w-5 h-5 text-[#10B981] mt-0.5 shrink-0" />
+                  <span className="text-sm text-slate-300">Roll back to last known-good model if validation fails</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Interactive Before vs After Slider */}
+            <div className="relative">
+              <div
+                ref={sliderRef}
+                onMouseDown={handleMouseDown}
+                onTouchMove={handleTouchMove}
+                className="relative h-[400px] bg-[#0B0E14] rounded-xl border border-[#232D3F] overflow-hidden select-none cursor-ew-resize"
+              >
+                {/* WITHOUT SENTINEL IMAGE */}
+                <div className="absolute inset-0">
+                  <img
+                    className="w-full h-full object-cover"
+                    src="https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_20dace3303_343ae31ee89b4a81.png"
+                    alt="Without SentinelML"
+                  />
+                </div>
+
+                {/* WITH SENTINEL OVERLAY */}
+                <div
+                  className="absolute inset-0 overflow-hidden border-r border-white/30"
+                  style={{ width: `${sliderPercentage}%` }}
+                >
+                  <img
+                    className="w-full h-full object-cover"
+                    src="https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_128d81122e_754ced87117d97a3.png"
+                    alt="With SentinelML"
+                  />
+                </div>
+
+                <div className="absolute top-4 left-4 bg-rose-600 text-white px-3 py-1 rounded text-[10px] font-bold shadow-lg">
+                  WITHOUT SENTINEL
+                </div>
+                <div className="absolute top-4 right-4 bg-emerald-600 text-white px-3 py-1 rounded text-[10px] font-bold shadow-lg">
+                  WITH SENTINEL
+                </div>
+
+                {/* SLIDER HANDLE */}
+                <div
+                  className="absolute top-0 bottom-0 w-1 bg-white z-20"
+                  style={{ left: `${sliderPercentage}%` }}
+                >
+                  <div className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-[#0B0E14] border-2 border-white rounded-full flex items-center justify-center text-white shadow-xl">
+                    <Sliders className="w-4 h-4 text-white" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 flex justify-between text-xs text-slate-400 font-mono">
+                <span>Accuracy collapse (silent)</span>
+                <span className="text-[#10B981]">Auto-recovered in &lt; 500ms</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Implementation Code Section */}
+      <section id="docs" className="py-24 px-6 border-b border-[#232D3F]">
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+          <div className="order-2 lg:order-1 relative">
+            <div className="bg-[#131822] border border-[#232D3F] rounded-2xl p-8 font-mono text-sm overflow-x-auto shadow-2xl">
+              <div className="flex items-center justify-between mb-6 border-b border-[#232D3F] pb-4">
+                <div className="flex items-center space-x-2">
+                  <span className="w-3 h-3 rounded-full bg-rose-500/50" />
+                  <span className="w-3 h-3 rounded-full bg-amber-500/50" />
+                  <span className="w-3 h-3 rounded-full bg-emerald-500/50" />
+                  <span className="ml-2 text-xs text-slate-500">production_monitoring.py</span>
+                </div>
+                <Check className="text-[#10B981] w-4 h-4" />
+              </div>
+              <pre className="text-slate-300 leading-relaxed">
+                <code>
+                  <span className="text-[#A855F7]">from</span> sentinel_ml{' '}
+                  <span className="text-[#A855F7]">import</span>{' '}
+                  <span className="text-[#10B981]">SentinelMonitor</span>
+                  {'\n\n'}
+                  <span className="text-slate-500"># Autonomous watchdog for fraud model</span>
+                  {'\n'}
+                  monitor = <span className="text-[#10B981]">SentinelMonitor</span>({'\n'}
+                  {'  '}model_id=<span className="text-[#F59E0B]">&quot;fraud-classifier-v2&quot;</span>,{'\n'}
+                  {'  '}env=<span className="text-[#F59E0B]">&quot;production&quot;</span>
+                  {'\n'}){'\n\n'}
+                  <span className="text-slate-500"># Log predictions &amp; features</span>
+                  {'\n'}
+                  monitor.<span className="text-[#A855F7]">log_prediction</span>({'\n'}
+                  {'  '}features=inputs,{'\n'}
+                  {'  '}prediction=pred,{'\n'}
+                  {'  '}latency_ms=<span className="text-[#F59E0B]">18.4</span>
+                  {'\n'}){'\n\n'}
+                  <span className="text-slate-500">
+                    # SentinelML automatically computes KS-Drift
+                  </span>
+                  {'\n'}
+                  <span className="text-slate-500">
+                    # &amp; triggers self-healing if threshold &gt; 0.20
+                  </span>
+                </code>
+              </pre>
+            </div>
+            <div className="absolute -inset-10 bg-[#A855F7]/5 rounded-full blur-[80px] -z-10" />
+          </div>
+
+          <div className="order-1 lg:order-2 space-y-6">
+            <h2 className="text-4xl font-bold tracking-tight text-white">
+              3-Line Code Integration
+            </h2>
+            <p className="text-slate-400 leading-relaxed text-lg">
+              Developer experience focused monitoring. Wrap any model with our lightweight SDK and get production-grade observability and autonomous recovery instantly.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <span className="px-3 py-1 bg-white/5 rounded-full text-[10px] border border-[#232D3F] uppercase tracking-widest text-slate-400 font-bold font-mono">
+                Python SDK
+              </span>
+              <span className="px-3 py-1 bg-white/5 rounded-full text-[10px] border border-[#232D3F] uppercase tracking-widest text-slate-400 font-bold font-mono">
+                DVC 3.0
+              </span>
+              <span className="px-3 py-1 bg-white/5 rounded-full text-[10px] border border-[#232D3F] uppercase tracking-widest text-slate-400 font-bold font-mono">
+                MLflow
+              </span>
+            </div>
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center space-x-2 bg-[#A855F7]/10 text-[#A855F7] border border-[#A855F7]/20 px-6 py-3 rounded-lg font-medium hover:bg-[#A855F7] hover:text-white transition-all"
+            >
+              <span>Explore Control Center</span>
+              <ExternalLink className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Ecosystem Bento Grid */}
+      <section id="architecture" className="py-24 px-6 bg-[#131822]">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-12">
+            <h2 className="text-4xl font-bold tracking-tight text-white mb-4">
+              Architecture &amp; Tech Stack
+              <br />
+              Ecosystem
+            </h2>
+            <p className="text-slate-400 max-w-2xl text-lg">
+              Seamless integrations across your entire MLOps lifecycle from ingestion to serving.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="md:col-span-2 bg-[#0B0E14] border border-[#232D3F] rounded-2xl p-8 relative overflow-hidden group min-h-[400px]">
+              <div className="relative z-10">
+                <h3 className="font-bold text-2xl text-white mb-4">
+                  Control Plane Orchestration
+                </h3>
+                <p className="text-slate-400 text-sm max-w-md leading-relaxed">
+                  Centralized management of drift thresholds, retraining triggers, and hot-swap policies across globally distributed model clusters.
+                </p>
+              </div>
+              <div className="absolute right-0 bottom-0 w-full h-full">
+                <img
+                  className="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity duration-700"
+                  src="https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_5f07116716_26436f4a7490324a.png"
+                  alt="Architecture Diagram"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0B0E14] via-[#0B0E14]/20 to-transparent" />
+              </div>
+            </div>
+
+            <div className="bg-[#0B0E14] border border-[#232D3F] rounded-2xl p-8 flex flex-col justify-between group">
+              <div className="space-y-6">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center border border-[#232D3F]">
+                    <Cpu className="w-6 h-6 text-[#A855F7]" />
+                  </div>
+                  <span className="font-bold text-lg text-white">Python Core</span>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center border border-[#232D3F]">
+                    <Zap className="w-6 h-6 text-[#10B981]" />
+                  </div>
+                  <span className="font-bold text-lg text-white">FastAPI Core</span>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center border border-[#232D3F]">
+                    <Layers className="w-6 h-6 text-[#F59E0B]" />
+                  </div>
+                  <span className="font-bold text-lg text-white">Redis Cache</span>
+                </div>
+              </div>
+              <div className="mt-8 h-48 rounded-xl overflow-hidden border border-[#232D3F]">
+                <img
+                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                  src="https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_7a6e4a3475_5d0b595776bab111.png"
+                  alt="Processing stack"
+                />
+              </div>
+            </div>
+
+            <div className="bg-[#0B0E14] border border-[#232D3F] rounded-2xl p-6 flex flex-col justify-between group">
+              <div className="aspect-square rounded-xl overflow-hidden mb-4">
+                <img
+                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                  src="https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_11246aade6_b4d446a7a6efd9cd.png"
+                  alt="PyTorch Native"
+                />
+              </div>
+              <div>
+                <h4 className="font-bold text-white mb-1">PyTorch Native</h4>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Hooks into the autograd loop for per-batch monitoring and zero-latency drift detection.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-[#0B0E14] border border-[#232D3F] rounded-2xl p-6 flex flex-col justify-between group">
+              <div className="aspect-square rounded-xl overflow-hidden mb-4">
+                <img
+                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                  src="https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_435ae3696f_7799d3683b819c25.png"
+                  alt="Cloud Agnostic"
+                />
+              </div>
+              <div>
+                <h4 className="font-bold text-white mb-1">Cloud Agnostic</h4>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  AWS, GCP, Azure—deploy anywhere, observe everywhere with unified control plane.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-[#0B0E14] border border-[#232D3F] rounded-2xl p-6 flex flex-col justify-between group">
+              <div className="aspect-square rounded-xl overflow-hidden mb-4">
+                <img
+                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                  src="https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_dcca43d7e8_0d78689e2c3960b7.png"
+                  alt="SOC 2 Compliant"
+                />
+              </div>
+              <div>
+                <h4 className="font-bold text-white mb-1">SOC 2 Compliant</h4>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Enterprise-grade audit trails, role-based access, and encrypted model telemetry.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-[#0B0E14] border-t border-[#232D3F] pt-20 pb-10 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-12 mb-16">
+            <div className="space-y-6">
+              <div className="flex items-center space-x-2">
+                <Shield className="w-6 h-6 text-[#A855F7]" />
+                <span className="font-bold text-lg text-white tracking-tight">SentinelML</span>
+              </div>
+              <p className="text-sm text-slate-500 leading-relaxed">
+                Autonomous reliability for machine learning systems. Built for engineers who ship models to millions.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-bold text-sm uppercase tracking-widest text-slate-200 mb-6 font-mono">
+                Product
+              </h4>
+              <ul className="space-y-3 text-sm text-slate-400">
+                <li>
+                  <a href="#features" className="hover:text-white transition-colors">
+                    Features
+                  </a>
+                </li>
+                <li>
+                  <a href="#architecture" className="hover:text-white transition-colors">
+                    Integrations
+                  </a>
+                </li>
+                <li>
+                  <Link href="/dashboard" className="hover:text-white transition-colors">
+                    Control Center
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold text-sm uppercase tracking-widest text-slate-200 mb-6 font-mono">
+                Resources
+              </h4>
+              <ul className="space-y-3 text-sm text-slate-400">
+                <li>
+                  <a href="#docs" className="hover:text-white transition-colors">
+                    Documentation
+                  </a>
+                </li>
+                <li>
+                  <a href="#docs" className="hover:text-white transition-colors">
+                    API Reference
+                  </a>
+                </li>
+                <li>
+                  <Link href="/incidents" className="hover:text-white transition-colors">
+                    System Incidents
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold text-sm uppercase tracking-widest text-slate-200 mb-6 font-mono">
+                Platform
+              </h4>
+              <ul className="space-y-3 text-sm text-slate-400">
+                <li>
+                  <Link href="/models" className="hover:text-white transition-colors">
+                    Models Registry
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/retraining" className="hover:text-white transition-colors">
+                    Retraining Pipelines
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/settings" className="hover:text-white transition-colors">
+                    Settings &amp; Keys
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t border-[#232D3F] pt-10 flex flex-col md:flex-row justify-between items-center space-y-6 md:space-y-0">
+            <div className="flex items-center space-x-6 text-slate-400">
+              <a
+                href="https://github.com/harnishndangi/sentinal-ai"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-white transition-colors font-mono text-xs flex items-center gap-1.5"
+              >
+                <Star className="w-4 h-4 text-amber-400" />
+                <span>GitHub Repository</span>
+              </a>
+            </div>
+            <div className="flex items-center space-x-4">
+              <input
+                type="email"
+                placeholder="Developer Newsletter"
+                className="bg-white/5 border border-[#232D3F] rounded-lg px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-[#A855F7] transition-colors"
+              />
+              <button className="bg-[#A855F7] hover:bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                Subscribe
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-10 flex justify-between items-center text-xs text-slate-600">
+            <span>© 2026 SentinelML. All rights reserved.</span>
+            <div className="flex space-x-6">
+              <Link href="/dashboard" className="hover:text-slate-400">
+                Control Panel
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }
