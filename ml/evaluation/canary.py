@@ -151,7 +151,7 @@ class CanaryMetrics:
 
 
 class CanaryConfigManager:
-    """Thread-safe singleton managing active CanaryConfig and CanaryMetrics."""
+    """Thread-safe singleton managing active CanaryConfig, CanaryMetrics, and Frontend Notifications."""
     _instance = None
 
     def __new__(cls):
@@ -159,8 +159,19 @@ class CanaryConfigManager:
             cls._instance = super(CanaryConfigManager, cls).__new__(cls)
             cls._instance.config = CanaryConfig()
             cls._instance.metrics = CanaryMetrics()
+            cls._instance.notifications = []
             cls._instance.lock = threading.Lock()
         return cls._instance
+
+    def add_notification(self, notification: Dict[str, Any]):
+        with self.lock:
+            self.notifications.append(notification)
+            if len(self.notifications) > 100:
+                self.notifications = self.notifications[-100:]
+
+    def get_notifications(self) -> List[Dict[str, Any]]:
+        with self.lock:
+            return list(self.notifications)
 
     def update_config(
         self,

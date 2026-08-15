@@ -1,13 +1,16 @@
 """
-FastAPI Router for Application-Level Canary & Shadow Deployment Management.
+FastAPI Router for Application-Level Canary & Shadow Deployment Management and Progressive Promotion.
 
 Exposes:
 - GET /api/v1/canary/config
 - POST /api/v1/canary/config
 - GET /api/v1/canary/metrics
+- GET /api/v1/canary/notifications
 - POST /api/v1/canary/promote
+- POST /api/v1/canary/progressive-promotion/start
+- POST /api/v1/canary/progressive-promotion/advance
 """
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -15,6 +18,11 @@ from sqlalchemy.orm import Session
 from backend.app.dependencies import get_db
 from ml.evaluation.canary import CanaryConfigManager, ALLOWED_CANARY_PERCENTAGES
 from ml.evaluation.quality_gate import ModelQualityGate
+from ml.evaluation.progressive_promotion import (
+    ProgressivePromotionManager,
+    ProgressivePromotionState,
+    PromotionThresholds,
+)
 from ml.registry.model_registry import ModelRegistry
 
 router = APIRouter(prefix="/canary", tags=["Canary & Shadow Deployment"])
@@ -33,6 +41,17 @@ class PromoteCanaryRequest(BaseModel):
     candidate_version: Optional[str] = Field(default=None, description="Candidate version string to promote to production")
     candidate_version_id: Optional[str] = Field(default=None, description="Candidate version ID to promote to production")
     force: Optional[bool] = Field(default=False, description="Force promotion bypassing quality gate checks")
+
+
+class StartProgressivePromotionRequest(BaseModel):
+    model_name: str = Field(default="FraudDetector", description="Model name to promote")
+    candidate_version: str = Field(..., description="Candidate version string")
+    incident_id: Optional[str] = Field(default=None, description="Associated operational incident ID")
+
+
+class AdvanceProgressivePromotionRequest(BaseModel):
+    state: ProgressivePromotionState = Field(..., description="Current progressive promotion state payload")
+    candidate_live_metrics: Optional[Dict[str, Any]] = Field(default=None, description="Optional live evaluation metrics")
 
 
 @router.get(
@@ -79,6 +98,18 @@ def get_canary_metrics():
     """Returns comparative metrics for Production vs Candidate models."""
     manager = CanaryConfigManager()
     return manager.metrics.get_summary()
+
+
+@router.get(
+    "/notifications",
+    status_code=status.HTTP_200_OK,
+    summary="Get Frontend Canary & Rollback Notifications",
+    description="Retrieves active notification stream for frontend UI (e.g. rollback alerts, stage advancements).",
+)
+def get_canary_notifications():
+    """Returns frontend notifications."""
+    manager = CanaryConfigManager()
+    return manager.get_notifications()
 
 
 @router.post(
@@ -153,7 +184,6 @@ def promote_canary_candidate(
 
     promoted_ver = registry.promote_model(model_name=model_name, version=version_str, target_status="PRODUCTION")
 
-    # Update canary config to 100% production (disable canary mode)
     manager.update_config(
         enabled=False,
         mode="SHADOW",
@@ -168,3 +198,50 @@ def promote_canary_candidate(
         "promoted_version": version_str,
         "details": promoted_ver,
     }
+
+
+@router.post(
+    "/progressive-promotion/start",
+    status_code=status.HTTP_200_OK,
+    summary="Start Progressive Promotion Pipeline",
+    description="Starts progressive promotion workflow (Quality Gate -> Shadow -> Canary 10% -> 25% -> 50% -> 100%).",
+)
+def start_progressive_promotion(
+    request: StartProgressivePromotionRequest,
+    db: Session = Depends(get_db),
+):
+    """Initiates progressive promotion starting with Step 1: Offline Quality Gate."""
+    promo_mgr = ProgressivePromotionManager(db)
+    try:
+        state = promo_mgr.start_promotion_pipeline(
+            model_name=request.model_name,
+            candidate_version=request.candidate_version,
+            incident_id=request.incident_id,
+        )
+        return state
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.post(
+    "/progressive-promotion/advance",
+    status_code=status.HTTP_200_OK,
+    summary="Advance Progressive Promotion Stage or Rollback",
+    description="Evaluates stage metrics and advances stage (Shadow -> Canary 10% -> 25% -> 50% -> 100%) or triggers immediate ROLLBACK.",
+)
+def advance_progressive_promotion(
+    request: AdvanceProgressivePromotionRequest,
+    db: Session = Depends(get_db),
+):
+    """Advances progressive promotion state or executes immediate rollback on degradation."""
+    promo_mgr = ProgressivePromotionManager(db)
+    try:
+        updated_state = promo_mgr.advance_stage(
+            state=request.state,
+            candidate_live_metrics=request.candidate_live_metrics,
+        )
+        return updated_state
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

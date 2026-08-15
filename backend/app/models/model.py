@@ -56,6 +56,8 @@ class ModelVersion(Base, UUIDMixin, TimestampMixin):
         """Formats model version into standard SentinelML Model Registry dict representation."""
         effective_artifact_path = self.artifact_path or self.artifact_uri
         return {
+            "id": self.id,
+            "version_id": self.id,
             "model_id": self.model_id,
             "model_name": self.model.name if self.model else None,
             "version": self.version,
