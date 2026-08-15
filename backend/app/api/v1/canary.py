@@ -245,3 +245,53 @@ def advance_progressive_promotion(
         return updated_state
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+from backend.app.models.job import AsyncJob
+from backend.app.workers.evaluation_worker import evaluate_candidate_task
+
+
+class EvaluateCandidateAsyncRequest(BaseModel):
+    candidate_version_id: str = Field(..., description="Candidate model version ID to evaluate")
+    production_version_id: Optional[str] = Field(default=None, description="Current production model version ID")
+    force_promote: Optional[bool] = Field(default=False, description="Force promotion bypassing quality gate")
+
+
+@router.post(
+    "/evaluate/async",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Queue Asynchronous Candidate Model Evaluation & Canary Promotion",
+    description="Queues candidate quality gate evaluation and canary traffic deployment into background Celery worker.",
+)
+def evaluate_candidate_async(
+    request: EvaluateCandidateAsyncRequest,
+    db: Session = Depends(get_db),
+):
+    """Queues candidate evaluation into background Celery worker."""
+    task = evaluate_candidate_task.delay(
+        candidate_version_id=request.candidate_version_id,
+        production_version_id=request.production_version_id,
+        force_promote=request.force_promote,
+    )
+
+    job_rec = AsyncJob(
+        job_id=task.id,
+        task_type="candidate_evaluation",
+        status="QUEUED",
+        progress=0.0,
+        payload={
+            "candidate_version_id": request.candidate_version_id,
+            "production_version_id": request.production_version_id,
+            "force_promote": request.force_promote,
+        },
+    )
+    db.add(job_rec)
+    db.commit()
+
+    return {
+        "job_id": task.id,
+        "candidate_version_id": request.candidate_version_id,
+        "status": "QUEUED",
+        "message": "Candidate model evaluation task queued successfully in background Celery worker.",
+    }
+

@@ -30,8 +30,12 @@ class TriggerRetrainingRequest(BaseModel):
     async_execution: Optional[bool] = Field(default=True, description="Whether to run pipeline asynchronously in background")
 
 
+from backend.app.models.job import AsyncJob
+from backend.app.workers.retraining_worker import retrain_model_task
+
 class TriggerRetrainingResponse(BaseModel):
     run_id: str
+    job_id: str
     incident_id: Optional[str] = None
     status: str
     current_step: str
@@ -43,14 +47,13 @@ class TriggerRetrainingResponse(BaseModel):
     status_code=status.HTTP_202_ACCEPTED,
     response_model=TriggerRetrainingResponse,
     summary="Trigger Automated Retraining Flow",
-    description="Initiates Prefect-orchestrated self-healing automated retraining flow for an incident or target model version.",
+    description="Initiates Celery-queued, self-healing automated retraining flow for an incident or target model version.",
 )
 def trigger_retraining(
     request: TriggerRetrainingRequest,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
-    """Triggers the self-healing automated retraining pipeline."""
+    """Triggers the self-healing automated retraining pipeline via Celery async worker."""
     run_id = str(uuid.uuid4())
     inc_id = request.incident_id
 
@@ -66,41 +69,44 @@ def trigger_retraining(
     update_run_state(
         run_id=run_id,
         current_step="Initializing Flow",
-        status="RUNNING",
+        status="QUEUED",
         incident_id=inc_id,
     )
 
-    flow_kwargs = {
-        "incident_id": inc_id,
-        "model_version_id": request.model_version_id,
-        "model_type": request.model_type or "xgboost",
-        "run_id": run_id,
-    }
+    # Queue Celery task
+    task = retrain_model_task.delay(
+        run_id=run_id,
+        incident_id=inc_id,
+        model_version_id=request.model_version_id,
+        model_type=request.model_type or "xgboost",
+        job_id=run_id,
+    )
 
-    if request.async_execution:
-        thread = threading.Thread(
-            target=automated_retraining_flow,
-            kwargs=flow_kwargs,
-            daemon=True,
-        )
-        thread.start()
-    else:
-        try:
-            automated_retraining_flow(**flow_kwargs)
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Retraining flow failed: {str(e)}",
-            )
+    # Record in AsyncJob DB table
+    job_rec = AsyncJob(
+        job_id=task.id,
+        task_type="model_retraining",
+        status="QUEUED",
+        progress=0.0,
+        payload={
+            "run_id": run_id,
+            "incident_id": inc_id,
+            "model_version_id": request.model_version_id,
+            "model_type": request.model_type or "xgboost",
+        },
+    )
+    db.add(job_rec)
+    db.commit()
 
-    run_state = get_run_state(run_id) or {}
     return TriggerRetrainingResponse(
         run_id=run_id,
-        incident_id=run_state.get("incident_id") or inc_id,
-        status=run_state.get("status", "RUNNING"),
-        current_step=run_state.get("current_step", "Initializing Flow"),
-        message="Automated retraining pipeline initiated successfully.",
+        job_id=task.id,
+        incident_id=inc_id,
+        status="QUEUED",
+        current_step="Queued in Background Worker",
+        message="Automated retraining pipeline queued successfully in Celery worker queue.",
     )
+
 
 
 @router.get(

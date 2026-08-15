@@ -1,9 +1,11 @@
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.config import settings
 from backend.app.core.logging import setup_logging, logger
 from backend.app.api.v1.router import api_router
+from backend.app.websocket import websocket_router, start_redis_event_listener
 
 
 @asynccontextmanager
@@ -11,9 +13,17 @@ async def lifespan(app: FastAPI):
     # Startup tasks
     setup_logging()
     logger.info("Starting SentinelML API Server", version=settings.VERSION, env=settings.ENVIRONMENT)
+    
+    # Launch Redis Pub/Sub listener for WebSockets
+    pubsub_task = asyncio.create_task(start_redis_event_listener())
     yield
     # Shutdown tasks
     logger.info("Shutting down SentinelML API Server")
+    pubsub_task.cancel()
+    try:
+        await pubsub_task
+    except asyncio.CancelledError:
+        pass
 
 
 app = FastAPI(
@@ -35,8 +45,9 @@ if settings.CORS_ORIGINS:
         allow_headers=["*"],
     )
 
-# Include API Router
+# Include API Router & WebSocket Router
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+app.include_router(websocket_router)  # Mounts /ws/events
 
 
 @app.get("/")
@@ -45,4 +56,6 @@ def root():
         "message": "Welcome to SentinelML - Autonomous ML Reliability & Self-Healing Platform API",
         "docs": f"{settings.API_V1_PREFIX}/docs",
         "health": f"{settings.API_V1_PREFIX}/health",
+        "events_websocket": "/ws/events",
     }
+

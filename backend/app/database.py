@@ -26,6 +26,12 @@ else:
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+# Auto-register all models with Base.metadata
+try:
+    import backend.app.models  # noqa
+except ImportError:
+    pass
+
 
 def get_db():
     """Dependency generator for database sessions."""
@@ -34,3 +40,4 @@ def get_db():
         yield db
     finally:
         db.close()
+

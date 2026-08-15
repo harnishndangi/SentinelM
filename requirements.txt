@@ -13,6 +13,8 @@ asyncpg>=0.29.0
 
 # Caching & Message Broker
 redis>=5.0.3
+celery>=5.3.6
+
 
 # Structured Logging & Telemetry
 structlog>=24.1.0

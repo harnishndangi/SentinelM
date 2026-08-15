@@ -48,6 +48,15 @@ class Settings(BaseSettings):
     REDIS_PASSWORD: str = ""
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # Celery Background Processing
+    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
+    CELERY_TASK_ALWAYS_EAGER: bool = False  # Set to True for testing synchronous fallback if broker is offline
+
+    # Real-Time WebSocket Settings
+    WS_REDIS_CHANNEL: str = "sentinel_websocket_events"
+
+
     # ML Storage Paths
     DATA_DIR: str = "./data"
     ARTIFACTS_DIR: str = "./artifacts"

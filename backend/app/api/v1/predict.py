@@ -72,7 +72,48 @@ def predict_fraud_batch(
         )
 
 
+from backend.app.models.job import AsyncJob
+from backend.app.workers.prediction_worker import batch_prediction_task
+
+
+
 @router.post(
+    "/predict/batch/async",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Queue Asynchronous Batch Inference Task",
+    description="Queues high-throughput vectorized batch inference into background Celery workers and returns a job ID.",
+)
+def predict_fraud_batch_async(
+    request: BatchPredictionRequest,
+    db: Session = Depends(get_db),
+):
+    """Queues batch inference task into Celery worker queue."""
+    records = [tx.model_dump() for tx in request.transactions]
+    task = batch_prediction_task.delay(
+        records=records,
+        model_version_id=request.model_version_id,
+    )
+
+    job_rec = AsyncJob(
+        job_id=task.id,
+        task_type="batch_prediction",
+        status="QUEUED",
+        progress=0.0,
+        payload={"num_records": len(records), "model_version_id": request.model_version_id},
+    )
+    db.add(job_rec)
+    db.commit()
+
+    return {
+        "job_id": task.id,
+        "status": "QUEUED",
+        "num_records": len(records),
+        "message": "Batch prediction task queued successfully in background worker.",
+    }
+
+
+@router.post(
+
     "/feedback/label",
     response_model=LabelFeedbackResponse,
     status_code=status.HTTP_200_OK,

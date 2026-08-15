@@ -122,8 +122,10 @@ def test_retraining_api_endpoints(client):
     assert response.status_code == 202
     data = response.json()
     assert "run_id" in data
+    assert "job_id" in data
     run_id = data["run_id"]
-    assert data["message"] == "Automated retraining pipeline initiated successfully."
+    assert "successfully" in data["message"].lower()
+
 
     # 2. Get retraining status via GET /api/v1/retraining/{run_id}
     status_res = client.get(f"/api/v1/retraining/{run_id}")

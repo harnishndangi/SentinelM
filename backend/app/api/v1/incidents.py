@@ -155,58 +155,41 @@ def resolve_incident(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+from backend.app.models.job import AsyncJob
+from backend.app.workers.incident_worker import generate_incident_report_task
+
+
 @router.post(
     "/{incident_id}/rca",
-    status_code=status.HTTP_200_OK,
-    summary="Execute Root-Cause Analysis for Incident",
-    description="Calculates performance degradation, SHAP feature impact ranking, and affected business segments, storing RCA results in the Incident database record.",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Execute Root-Cause Analysis for Incident via Celery Worker",
+    description="Calculates performance degradation, SHAP feature impact ranking, and affected business segments asynchronously in Celery.",
 )
 def run_incident_rca(
     incident_id: str,
     db: Session = Depends(get_db),
 ):
-    """Triggers Root Cause Analysis for a specific incident."""
+    """Triggers Root Cause Analysis for a specific incident asynchronously."""
     inc = db.query(Incident).filter(Incident.id == incident_id).first()
     if not inc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Incident '{incident_id}' not found.")
 
-    model_ver = db.query(ModelVersion).filter(ModelVersion.id == inc.model_version_id).first()
-    model_name = model_ver.model.name if model_ver and model_ver.model else "FraudDetector"
-    model_version_str = model_ver.version if model_ver else "v1.0.0"
+    task = generate_incident_report_task.delay(incident_id=incident_id)
 
-    simulator = DriftSimulator(db)
-    ref_df = simulator.get_baseline_reference_data(num_records=2000)
-    cur_df = simulator.apply_drift_scenario(
-        df=ref_df,
-        scenario="MULTI_FEATURE_DRIFT",
-        intensity=0.85,
+    job_rec = AsyncJob(
+        job_id=task.id,
+        task_type="incident_report",
+        status="QUEUED",
+        progress=0.0,
+        payload={"incident_id": incident_id, "model_version_id": inc.model_version_id},
     )
-
-    analyzer = RootCauseAnalyzer()
-    rca_res = analyzer.analyze_root_cause(
-        model_name=model_name,
-        model_version=model_version_str,
-        ref_df=ref_df,
-        cur_df=cur_df,
-    )
-
-    inc.rca_result = rca_res
-    db.add(inc)
-
-    # Append timeline events if not present
-    service = IncidentService(db)
-    service.add_timeline_event(
-        incident_id=inc.id,
-        event_type=IncidentEventType.ROOT_CAUSE_STARTED,
-        message="Manual RCA trigger executed.",
-    )
-    service.add_timeline_event(
-        incident_id=inc.id,
-        event_type=IncidentEventType.ROOT_CAUSE_COMPLETED,
-        message="RCA analysis completed.",
-    )
-
+    db.add(job_rec)
     db.commit()
-    db.refresh(inc)
 
-    return rca_res
+    return {
+        "job_id": task.id,
+        "incident_id": incident_id,
+        "status": "QUEUED",
+        "message": "Incident RCA analysis task queued successfully in background Celery worker.",
+    }
+

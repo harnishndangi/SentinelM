@@ -9,6 +9,7 @@ from backend.app.models.incident import Incident, IncidentEvent
 from backend.app.models.experiment import TrainingRun, Experiment, ExperimentMetric
 from backend.app.models.deployment import Deployment, DeploymentMetric
 from backend.app.models.audit import Alert, AuditLog
+from backend.app.models.job import AsyncJob
 
 __all__ = [
     "Base",
@@ -34,4 +35,6 @@ __all__ = [
     "DeploymentMetric",
     "Alert",
     "AuditLog",
+    "AsyncJob",
 ]
+
