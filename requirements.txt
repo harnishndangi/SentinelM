@@ -35,6 +35,8 @@ river>=0.18.0
 shap>=0.45.0
 pandera>=0.18.0
 joblib>=1.3.2
+prefect>=3.0.0
+
 
 # Testing & Quality
 pytest>=8.1.1

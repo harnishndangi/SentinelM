@@ -3,9 +3,15 @@ import pandas as pd
 import pandera.pandas as pa
 from pandera.pandas import Column, Check, DataFrameSchema
 
-MERCHANT_CATEGORIES = ["retail", "electronics", "travel", "food", "online", "luxury", "entertainment", "utilities"]
+MERCHANT_CATEGORIES = [
+    "retail", "electronics", "travel", "food", "online", "luxury", "entertainment", "utilities",
+    "crypto_exchange", "p2p_gambling", "high_tier_giftcards"
+]
 DEVICE_TYPES = ["mobile_ios", "mobile_android", "desktop_mac", "desktop_windows", "tablet", "unknown"]
-REGIONS = ["north_america", "europe", "asia_pacific", "latin_america", "middle_east", "africa"]
+REGIONS = [
+    "north_america", "europe", "asia_pacific", "latin_america", "middle_east", "africa",
+    "offshore_island", "metaverse_virtual", "unknown_proxy_region"
+]
 
 # Pandera Schema Definition
 TransactionSchema = DataFrameSchema(
