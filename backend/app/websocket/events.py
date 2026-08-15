@@ -62,15 +62,16 @@ class TrainingProgressPayload(BaseModel):
     progress_percentage: float
     epoch: Optional[int] = None
     loss: Optional[float] = None
-    metrics: Optional[Dict[str, float]] = None
+    metrics: Optional[Dict[str, Any]] = None
 
 
 class CandidateCreatedPayload(BaseModel):
     candidate_version_id: str
     model_name: str
     version_str: str
-    metrics: Dict[str, float]
+    metrics: Dict[str, Any]
     artifact_path: Optional[str] = None
+
 
 
 class QualityGatePassedPayload(BaseModel):

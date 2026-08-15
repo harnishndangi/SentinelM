@@ -16,6 +16,7 @@ def generate_incident_report_task(
     self,
     incident_id: str,
     job_id: Optional[str] = None,
+    db_session: Any = None,
 ) -> Dict[str, Any]:
     """
     Background worker for operational incident report generation and Root Cause Analysis (RCA).
@@ -26,8 +27,10 @@ def generate_incident_report_task(
 
     update_job_progress(current_job_id, "STARTED", 10.0)
 
-    db = SessionLocal()
+    db = db_session or SessionLocal()
+    should_close_db = db_session is None
     try:
+
         from backend.app.models.incident import Incident
         from backend.app.models.model import ModelVersion
         from backend.app.services.incident_service import IncidentService
