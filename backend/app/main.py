@@ -35,7 +35,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS configuration
+from backend.app.metrics.prometheus import prometheus_middleware, get_metrics_response
+
+# Include CORS middleware
 if settings.CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
@@ -45,9 +47,18 @@ if settings.CORS_ORIGINS:
         allow_headers=["*"],
     )
 
+# Prometheus HTTP instrumentation middleware
+app.middleware("http")(prometheus_middleware)
+
 # Include API Router & WebSocket Router
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 app.include_router(websocket_router)  # Mounts /ws/events
+
+
+@app.get("/metrics", tags=["Telemetry"])
+def metrics():
+    """Prometheus telemetry instrumentation metrics endpoint."""
+    return get_metrics_response()
 
 
 @app.get("/")
@@ -56,6 +67,8 @@ def root():
         "message": "Welcome to SentinelML - Autonomous ML Reliability & Self-Healing Platform API",
         "docs": f"{settings.API_V1_PREFIX}/docs",
         "health": f"{settings.API_V1_PREFIX}/health",
+        "metrics": "/metrics",
         "events_websocket": "/ws/events",
     }
+
 
