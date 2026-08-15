@@ -29,11 +29,11 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   const getStatusBorder = () => {
     switch (status) {
       case 'good':
-        return 'border-l-4 border-l-emerald-500';
+        return 'border-l-2 border-l-emerald-500';
       case 'warning':
-        return 'border-l-4 border-l-amber-500';
+        return 'border-l-2 border-l-amber-500';
       case 'bad':
-        return 'border-l-4 border-l-rose-500';
+        return 'border-l-2 border-l-rose-500';
       default:
         return '';
     }
@@ -42,27 +42,27 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   return (
     <div
       className={clsx(
-        'relative bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-lg transition-all hover:border-slate-700',
-        highlight && 'bg-gradient-to-br from-purple-950/30 to-slate-900 border-purple-500/30',
+        'relative bg-[#101417] border border-[#252E3B] rounded-lg p-4 transition-all hover:border-[#384659]',
+        highlight && 'border-purple-500/40 bg-gradient-to-br from-[#101417] to-purple-950/20',
         getStatusBorder()
       )}
     >
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium text-slate-400 tracking-wider uppercase">{title}</span>
-        {icon && <div className="text-purple-400 bg-purple-500/10 p-2 rounded-lg">{icon}</div>}
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-mono font-medium text-[#94a3b8] tracking-tight">{title}</span>
+        {icon && <div className="text-purple-400 bg-purple-500/10 p-1.5 rounded">{icon}</div>}
       </div>
 
       <div className="flex items-baseline justify-between">
-        <div className="text-2xl md:text-3xl font-bold font-mono text-slate-100 tracking-tight">
+        <div className="text-2xl md:text-3xl font-bold font-mono text-white tracking-tight">
           {value}
         </div>
         {change !== undefined && (
           <div
             className={clsx(
-              'flex items-center text-xs font-mono font-medium px-2 py-0.5 rounded-md',
+              'flex items-center text-xs font-mono font-medium px-2 py-0.5 rounded',
               isPositive && 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
               isNegative && 'bg-rose-500/10 text-rose-400 border border-rose-500/20',
-              !isPositive && !isNegative && 'bg-slate-800 text-slate-400'
+              !isPositive && !isNegative && 'bg-[#181d22] text-slate-400 border border-[#252E3B]'
             )}
           >
             {isPositive && <TrendingUp className="w-3 h-3 mr-1" />}
@@ -74,7 +74,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       </div>
 
       {(subValue || changeLabel) && (
-        <div className="mt-2 text-[11px] text-slate-400 font-mono flex items-center justify-between">
+        <div className="mt-2 text-[11px] text-[#94a3b8] font-mono flex items-center justify-between">
           {subValue && <span>{subValue}</span>}
           {changeLabel && <span className="text-slate-500">{changeLabel}</span>}
         </div>

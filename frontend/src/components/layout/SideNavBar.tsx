@@ -23,7 +23,6 @@ import {
   LogOut,
 } from 'lucide-react';
 
-
 const NAV_ITEMS = [
   { label: 'Overview', href: '/', icon: LayoutDashboard },
   { label: 'Models', href: '/models', icon: Cpu },
@@ -39,7 +38,6 @@ const NAV_ITEMS = [
   { label: 'Settings', href: '/settings', icon: Settings },
 ];
 
-
 export default function SideNavBar() {
   const pathname = usePathname();
   const [environment, setEnvironment] = useState<'PRODUCTION' | 'STAGING'>('PRODUCTION');
@@ -49,13 +47,13 @@ export default function SideNavBar() {
   };
 
   return (
-    <nav className="fixed left-0 top-0 h-screen w-[240px] border-r border-outline-variant bg-surface flex flex-col overflow-y-auto px-md py-lg z-50 transition-all">
+    <nav className="fixed left-0 top-0 h-screen w-[240px] border-r border-[#252E3B] bg-[#101417] flex flex-col overflow-y-auto px-4 py-5 z-50 transition-all font-sans">
       {/* Brand Header */}
-      <div className="mb-6 flex items-center gap-3">
-        <span className="material-symbols-outlined text-primary text-[32px]">shield</span>
+      <div className="mb-5 flex items-center gap-3 px-1">
+        <Shield className="w-7 h-7 text-[#d0bcff]" />
         <div>
-          <h1 className="text-display-md font-display-md font-bold text-primary tracking-tight">SentinelML</h1>
-          <p className="text-body-sm font-body-sm text-on-surface-variant">Reliability Control</p>
+          <h1 className="text-lg font-bold text-white tracking-tight font-sans">SentinelML</h1>
+          <p className="text-[11px] font-mono text-[#94a3b8]">Reliability Control</p>
         </div>
       </div>
 
@@ -63,20 +61,19 @@ export default function SideNavBar() {
       <button
         onClick={toggleEnv}
         title="Click to toggle Staging / Production"
-        className={`w-full font-mono-label text-mono-label py-2 rounded mb-6 flex items-center justify-center gap-2 transition-all ${
+        className={`w-full font-mono text-xs font-bold py-2.5 px-3 rounded mb-5 flex items-center justify-center gap-2 tracking-wider transition-all uppercase shadow-sm ${
           environment === 'PRODUCTION'
-            ? 'bg-primary text-on-primary hover:bg-primary-fixed-dim'
-            : 'bg-tertiary-container text-on-tertiary-container hover:bg-tertiary'
+            ? 'bg-[#d0bcff] text-[#340080] hover:bg-[#c4b5fd]'
+            : 'bg-[#ffb869] text-[#482900] hover:bg-[#ffa742]'
         }`}
       >
         <span>{environment}</span>
         {environment === 'PRODUCTION' ? (
-          <PlayCircle className="w-4 h-4" />
+          <PlayCircle className="w-4 h-4 text-[#340080] fill-[#340080]/20" />
         ) : (
-          <GitBranch className="w-4 h-4" />
+          <GitBranch className="w-4 h-4 text-[#482900]" />
         )}
       </button>
-
 
       {/* Links List */}
       <ul className="flex-1 space-y-1">
@@ -87,31 +84,29 @@ export default function SideNavBar() {
             <li key={item.href}>
               <Link
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2 rounded transition-colors duration-200 ease-in-out ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 ${
                   isActive
-                    ? 'text-primary font-bold bg-surface-container-high'
-                    : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+                    ? 'text-[#d0bcff] font-semibold bg-[#101417] border border-[#252E3B]'
+                    : 'text-[#e0e3e7] font-medium hover:bg-[#181c20] hover:text-white'
                 }`}
               >
-                <ItemIcon className="w-5 h-5" />
-                <span className="text-body-md font-body-md">{item.label}</span>
+                <ItemIcon className={`w-4 h-4 ${isActive ? 'text-[#d0bcff]' : 'text-[#94a3b8]'}`} />
+                <span className="text-sm font-sans tracking-tight">{item.label}</span>
               </Link>
             </li>
           );
         })}
       </ul>
 
-
       {/* Footer / Logout */}
-      <div className="mt-auto border-t border-outline-variant pt-4">
+      <div className="mt-auto border-t border-[#252E3B] pt-4">
         <button
           onClick={() => alert('Logged out successfully.')}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors duration-200 ease-in-out"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-[#e0e3e7] font-medium hover:bg-[#181c20] hover:text-white transition-colors"
         >
-          <LogOut className="w-5 h-5" />
-          <span className="text-body-md font-body-md">Logout</span>
+          <LogOut className="w-4 h-4 text-[#94a3b8]" />
+          <span className="text-sm font-sans">Logout</span>
         </button>
-
       </div>
     </nav>
   );

@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { Search, Bell, ChevronRight, User } from 'lucide-react';
 import { useSentinelStore } from '@/store/useSentinelStore';
 
 export default function TopAppBar() {
@@ -34,25 +35,25 @@ export default function TopAppBar() {
   const breadcrumbs = getBreadcrumbs();
 
   return (
-    <header className="fixed top-0 right-0 h-[64px] left-[240px] z-40 border-b border-outline-variant bg-surface flex items-center justify-between px-lg transition-all">
+    <header className="fixed top-0 right-0 h-[64px] left-[240px] z-40 border-b border-[#252E3B] bg-[#101417] flex items-center justify-between px-6 transition-all font-sans">
       {/* Breadcrumb Section */}
       <div className="flex items-center gap-4">
-        <div className="text-on-surface-variant font-mono-label text-mono-label flex items-center gap-2">
+        <div className="text-[#94a3b8] font-mono text-xs flex items-center gap-2">
           <span>{breadcrumbs.parent}</span>
-          <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-          <span className="text-primary font-bold">{breadcrumbs.current}</span>
+          <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+          <span className="text-[#d0bcff] font-semibold">{breadcrumbs.current}</span>
         </div>
       </div>
 
       {/* Action Controls */}
       <div className="flex items-center gap-4">
         {/* Global Search Bar */}
-        <div className="hidden md:flex items-center gap-sm bg-surface-container-high px-md py-1.5 rounded-full border border-outline-variant focus-within:border-primary transition-colors">
-          <span className="material-symbols-outlined text-on-surface-variant text-sm">search</span>
+        <div className="hidden md:flex items-center gap-2 bg-[#101417] px-3.5 py-1.5 rounded-lg border border-[#252E3B] focus-within:border-purple-500 transition-colors">
+          <Search className="w-4 h-4 text-[#94a3b8]" />
           <input
             type="text"
             placeholder="Search resources, models, features..."
-            className="bg-transparent border-none outline-none text-body-md font-body-md text-on-surface placeholder-on-surface-variant w-48 focus:ring-0"
+            className="bg-transparent border-none outline-none text-xs font-mono text-slate-200 placeholder-slate-500 w-48 focus:ring-0"
           />
         </div>
 
@@ -60,26 +61,26 @@ export default function TopAppBar() {
         <div className="relative">
           <button
             onClick={() => setNotificationsOpen(!notificationsOpen)}
-            className="text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer relative p-1 rounded hover:bg-surface-container"
+            className="text-[#94a3b8] hover:text-white transition-colors cursor-pointer relative p-1.5 rounded-lg hover:bg-[#181c20]"
             title="Notifications"
           >
-            <span className="material-symbols-outlined text-[24px]">notifications</span>
+            <Bell className="w-5 h-5" />
             {incidents.length > 0 && (
-              <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-status-error-text animate-pulse"></span>
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
             )}
           </button>
 
           {notificationsOpen && (
-            <div className="absolute right-0 top-10 w-80 bg-surface-container-high border border-outline-variant rounded-lg shadow-xl z-50 p-md">
-              <div className="flex justify-between items-center mb-3 pb-2 border-b border-outline-variant">
-                <span className="font-mono-label text-mono-label font-bold text-on-surface">Notifications</span>
-                <span className="text-body-sm text-status-error-text font-mono-label">{incidents.length} Alert(s)</span>
+            <div className="absolute right-0 top-11 w-80 bg-[#101417] border border-[#252E3B] rounded-lg shadow-xl z-50 p-4">
+              <div className="flex justify-between items-center mb-3 pb-2 border-b border-[#252E3B]">
+                <span className="font-mono text-xs font-bold text-white">Notifications</span>
+                <span className="text-xs text-rose-400 font-mono">{incidents.length} Alert(s)</span>
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {incidents.map((inc) => (
-                  <div key={inc.id} className="p-2 rounded bg-surface-container-low border border-outline-variant/40 text-body-sm">
-                    <p className="text-on-surface font-medium">{inc.title}</p>
-                    <div className="flex justify-between items-center mt-1 text-on-surface-variant text-[11px]">
+                  <div key={inc.id} className="p-2.5 rounded-md bg-[#101417] border border-[#252E3B] text-xs font-mono">
+                    <p className="text-slate-200 font-medium">{inc.title}</p>
+                    <div className="flex justify-between items-center mt-1 text-[#94a3b8] text-[11px]">
                       <span>{inc.affectedModel}</span>
                       <span>{inc.createdAt}</span>
                     </div>
@@ -91,18 +92,18 @@ export default function TopAppBar() {
         </div>
 
         {/* Live Status Pill */}
-        <div className="text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-2 bg-surface-container-high px-3 py-1.5 rounded-full card-border">
-          <span className="w-2 h-2 rounded-full bg-[#4ade80] animate-pulse"></span>
-          <span className="text-mono-label font-mono-label">Live</span>
+        <div className="flex items-center gap-2 bg-[#101417] px-3 py-1.5 rounded-lg border border-[#252E3B]">
+          <span className="w-2 h-2 rounded-full bg-[#4ade80] animate-pulse" />
+          <span className="text-xs font-mono text-white font-semibold">Live System</span>
         </div>
 
         {/* User Account */}
         <button
-          className="text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+          className="text-[#94a3b8] hover:text-white transition-colors cursor-pointer p-1"
           title="Account Profile"
           onClick={() => alert('SentinelML Admin User')}
         >
-          <span className="material-symbols-outlined text-[28px]">account_circle</span>
+          <User className="w-5 h-5" />
         </button>
       </div>
     </header>

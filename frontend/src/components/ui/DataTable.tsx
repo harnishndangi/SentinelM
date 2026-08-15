@@ -38,24 +38,24 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="w-full overflow-x-auto border border-slate-800 rounded-xl bg-slate-900/80 shadow-md">
+    <div className="w-full overflow-x-auto border border-[#252E3B] rounded-lg bg-[#101417]">
       <table className="w-full text-left text-sm text-slate-300 border-collapse">
-        <thead className="bg-slate-950/80 text-xs font-mono uppercase tracking-wider text-slate-400 border-b border-slate-800">
+        <thead className="bg-[#101417] text-xs font-mono uppercase tracking-wider text-[#94a3b8] border-b border-[#252E3B]">
           <tr>
             {columns.map((col) => (
-              <th key={col.key} className={clsx('py-3.5 px-4 font-semibold', col.className)}>
+              <th key={col.key} className={clsx('py-3 px-4 font-semibold', col.className)}>
                 {col.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800/60 font-mono text-xs">
+        <tbody className="divide-y divide-[#252E3B] font-mono text-xs">
           {data.map((row) => (
             <tr
               key={keyExtractor(row)}
               onClick={() => onRowClick && onRowClick(row)}
               className={clsx(
-                'transition-colors hover:bg-slate-800/50',
+                'transition-colors hover:bg-[#181d23]',
                 onRowClick && 'cursor-pointer'
               )}
             >

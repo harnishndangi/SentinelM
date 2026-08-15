@@ -148,37 +148,33 @@ export default function DashboardPage() {
   const isSystemHealthy = store.modelHealth > 75;
 
   return (
-    <main className="p-6 md:p-8 flex-1 overflow-y-auto bg-slate-950 text-slate-100 w-full h-full space-y-6">
-      {/* Top Header & Action Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+    <main className="p-6 md:p-8 flex-1 overflow-y-auto bg-[#101417] text-slate-100 w-full h-full space-y-6">
+      {/* Top Header & Telemetry Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#252E3B] pb-5">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl md:text-3xl font-bold font-mono tracking-tight text-white">
-              SentinelML Control Center
-            </h1>
-            <StatusBadge status={isSystemHealthy ? 'HEALTHY' : 'DEGRADED'} />
-          </div>
-          <p className="text-xs font-mono text-slate-400 mt-1">
-            Real-time Machine Learning Reliability, Feature Drift & Autonomous Recovery Engine
+          <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
+            Telemetry & Monitoring
+          </h1>
+          <p className="text-xs font-mono text-[#94a3b8] mt-1">
+            Live latency, throughput, prediction distribution, and hardware metrics.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           {/* Real-time WebSocket connection status */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-slate-400">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#101417] border border-[#252E3B] font-mono text-xs text-[#94a3b8]">
             <span
-              className={`w-2.5 h-2.5 rounded-full ${
-                isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
-              }`}
+              className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                }`}
             />
-            <span>{isConnected ? 'WS Stream Active' : 'WS Reconnecting'}</span>
+            <span>{isConnected ? 'WS Live Stream' : 'WS Reconnecting'}</span>
           </div>
 
           {/* Time Range Selector */}
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value)}
-            className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 font-mono text-xs text-slate-200 focus:outline-none focus:border-purple-500"
+            className="bg-[#101417] border border-[#252E3B] rounded-lg px-3 py-1.5 font-mono text-xs text-slate-200 focus:outline-none focus:border-purple-500"
           >
             <option value="Last 1h">Last 1h</option>
             <option value="Last 24h">Last 24h</option>
@@ -189,7 +185,7 @@ export default function DashboardPage() {
           {/* INJECT DRIFT BUTTON */}
           <button
             onClick={() => setIsDriftModalOpen(true)}
-            className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold font-mono text-xs rounded-xl shadow-lg flex items-center gap-2 transition-all"
+            className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold font-mono text-xs rounded-lg shadow-md flex items-center gap-2 transition-all"
           >
             <Zap className="w-4 h-4 fill-slate-950" />
             INJECT DRIFT
@@ -207,52 +203,75 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* Top Banner: Active Production Model & High-level Status */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-center">
-        {/* Production Model */}
-        <div className="flex items-center gap-3 border-r border-slate-800/80 pr-4">
-          <div className="p-3 bg-purple-500/10 rounded-xl text-purple-400 border border-purple-500/20">
-            <Cpu className="w-6 h-6" />
-          </div>
-          <div>
-            <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Active Production Model</span>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-base font-bold font-mono text-white">{store.activeModelName}</span>
-              <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-purple-950/60 text-purple-300 border border-purple-800/40">
-                {store.activeModelVersion}
-              </span>
-            </div>
-          </div>
+      {/* Telemetry Summary Cards Row (matching the image) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Card 1: p99 Latency */}
+        <div className="bg-[#101417] border border-[#252E3B] rounded-lg p-4">
+          <span className="text-xs font-mono text-[#94a3b8] block mb-1">p99 Latency</span>
+          <span className="text-2xl font-mono font-bold text-white">14.2 ms</span>
         </div>
 
+        {/* Card 2: Inference Rate */}
+        <div className="bg-[#101417] border border-[#252E3B] rounded-lg p-4">
+          <span className="text-xs font-mono text-[#94a3b8] block mb-1">Inference Rate</span>
+          <span className="text-2xl font-mono font-bold text-white">1,420 req/s</span>
+        </div>
+
+        {/* Card 3: Error Rate */}
+        <div className="bg-[#101417] border border-[#252E3B] rounded-lg p-4">
+          <span className="text-xs font-mono text-[#94a3b8] block mb-1">Error Rate</span>
+          <span className="text-2xl font-mono font-bold text-[#4ade80]">0.01%</span>
+        </div>
+      </div>
+
+      {/* Active Model Performance Metrics Container (matching the image) */}
+      <div className="bg-[#101417] border border-[#252E3B] rounded-lg p-5 space-y-4">
+        <h2 className="text-lg font-bold text-white tracking-tight">Active Model Performance Metrics</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Inner Card 1: Model */}
+          <div className="bg-[#101417] border border-[#252E3B] rounded-md p-4">
+            <span className="text-xs font-mono text-[#94a3b8] block mb-1">Model:</span>
+            <span className="text-base font-mono font-bold text-white">{store.activeModelName} {store.activeModelVersion}</span>
+          </div>
+
+          {/* Inner Card 2: PR-AUC / Recall */}
+          <div className="bg-[#101417] border border-[#252E3B] rounded-md p-4">
+            <span className="text-xs font-mono text-[#94a3b8] block mb-1">PR-AUC / Recall:</span>
+            <span className="text-base font-mono font-bold text-white">{store.prAuc} / {store.recall}%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* High-Level Status Row */}
+      <div className="bg-[#101417] border border-[#252E3B] rounded-lg p-4 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
         {/* Model Health Score */}
-        <div className="border-r border-slate-800/80 pr-4">
-          <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Model Health Score</span>
+        <div className="border-r border-[#252E3B] pr-4">
+          <span className="text-xs font-mono text-[#94a3b8]">Model Health Score</span>
           <div className="flex items-baseline gap-2 mt-0.5">
             <span
-              className={`text-2xl font-bold font-mono ${
-                store.modelHealth > 80 ? 'text-emerald-400' : 'text-amber-400'
-              }`}
+              className={`text-2xl font-bold font-mono ${store.modelHealth > 80 ? 'text-[#4ade80]' : 'text-amber-400'
+                }`}
             >
               {store.modelHealth}%
             </span>
-            <span className="text-xs font-mono text-slate-400">
+            <span className="text-xs font-mono text-[#94a3b8]">
               {store.healthTrend > 0 ? `+${store.healthTrend}%` : `${store.healthTrend}%`}
             </span>
           </div>
         </div>
 
         {/* Data Drift Status */}
-        <div className="border-r border-slate-800/80 pr-4">
-          <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Data Drift Status</span>
+        <div className="border-r border-[#252E3B] pr-4">
+          <span className="text-xs font-mono text-[#94a3b8]">Data Drift Status</span>
           <div className="mt-1">
             <StatusBadge status={store.dataDriftLevel === 'High' ? 'DEGRADED' : 'HEALTHY'} />
           </div>
         </div>
 
         {/* Concept Drift Status */}
-        <div className="border-r border-slate-800/80 pr-4">
-          <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Concept Drift Status</span>
+        <div className="border-r border-[#252E3B] pr-4">
+          <span className="text-xs font-mono text-[#94a3b8]">Concept Drift Status</span>
           <div className="mt-1">
             <StatusBadge status={store.predictionDriftLevel === 'High' ? 'CRITICAL' : 'HEALTHY'} />
           </div>
@@ -260,13 +279,14 @@ export default function DashboardPage() {
 
         {/* Open Incidents */}
         <div>
-          <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Open Incidents</span>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-xl font-bold font-mono text-rose-400">{store.openIncidentsCount}</span>
-            <span className="text-xs font-mono text-slate-400">Active RCA Alerts</span>
+          <span className="text-xs font-mono text-[#94a3b8]">Open Incidents</span>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-2xl font-bold font-mono text-rose-400">{store.openIncidentsCount}</span>
+            <span className="text-xs font-mono text-[#94a3b8]">Active RCA Alerts</span>
           </div>
         </div>
       </div>
+
 
       {/* Key Metrics Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -473,14 +493,15 @@ export default function DashboardPage() {
         </div>
 
         {/* Column 3: Self-Healing & Deployment Timeline */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-lg flex flex-col">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+        <div className="bg-[#101417] border border-[#252E3B] rounded-lg p-5 flex flex-col">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#252E3B]">
             <div>
               <h3 className="text-sm font-semibold text-white tracking-tight">Self-Healing Activity Feed</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Automated retraining & canary deployment timeline</p>
+              <p className="text-xs text-[#94a3b8] font-mono mt-0.5">Automated retraining & canary deployment timeline</p>
             </div>
             <RotateCcw className="w-4 h-4 text-purple-400" />
           </div>
+
 
           <Timeline
             events={store.recoveryActivities.map((act) => ({

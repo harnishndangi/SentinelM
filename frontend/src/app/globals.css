@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 
 @tailwind base;
@@ -7,7 +7,7 @@
 
 :root {
   --background: #101417;
-  --foreground: #e0e3e7;
+  --foreground: #f1f5f9;
   --card: #101417;
   --card-border: #252E3B;
   --primary: #d0bcff;
@@ -17,9 +17,39 @@
 
 body {
   color: var(--foreground);
-  background: var(--background);
+  background-color: #101417;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   min-height: 100vh;
+}
+
+.bg-canvas {
+  background-color: #101417;
+}
+
+.sentinel-card {
+  background-color: #101417;
+  border: 1px solid #252E3B;
+  border-radius: 0.5rem;
+}
+
+.sentinel-inner-card {
+  background-color: #101417;
+  border: 1px solid #252E3B;
+  border-radius: 0.375rem;
+}
+
+.sentinel-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.sentinel-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.025em;
 }
 
 .metric-trend-up {
@@ -46,8 +76,7 @@ body {
 }
 
 .glass-panel {
-  background: rgba(24, 28, 31, 0.85);
-  backdrop-filter: blur(12px);
+  background: #101417;
   border: 1px solid #252E3B;
 }
 
@@ -59,4 +88,3 @@ body {
     padding-right: 16px;
   }
 }
-

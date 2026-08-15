@@ -60,24 +60,25 @@ export default function ModelDetailPage() {
   const compareModel = store.models.find((m) => m.id === compareTargetId) || prodModel;
 
   return (
-    <main className="p-6 md:p-8 flex-1 overflow-y-auto bg-slate-950 text-slate-100 w-full h-full space-y-6">
+    <main className="p-6 md:p-8 flex-1 overflow-y-auto bg-[#101417] text-slate-100 w-full h-full space-y-6">
       {/* Navigation & Header */}
       <div className="space-y-3">
         <Link
           href="/models"
-          className="inline-flex items-center gap-2 text-xs font-mono text-slate-400 hover:text-white transition-colors"
+          className="inline-flex items-center gap-2 text-xs font-mono text-[#94a3b8] hover:text-white transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Model Registry
         </Link>
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#252E3B] pb-5">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-purple-500/10 rounded-xl text-purple-400 border border-purple-500/20">
+            <div className="p-3 bg-[#101417] rounded-lg text-purple-400 border border-[#252E3B]">
               <Cpu className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
+
                 <h1 className="text-2xl font-bold font-mono tracking-tight text-white">{model.name}</h1>
                 <ModelBadge modelName="" version={model.version} isActive={model.status === 'PRODUCTION'} />
                 <StatusBadge status={model.status} />

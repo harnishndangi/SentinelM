@@ -78,26 +78,26 @@ export default function ModelsPage() {
   });
 
   return (
-    <main className="p-6 md:p-8 flex-1 overflow-y-auto bg-slate-950 text-slate-100 w-full h-full space-y-6">
+    <main className="p-6 md:p-8 flex-1 overflow-y-auto bg-[#101417] text-slate-100 w-full h-full space-y-6">
       {/* Top Title & Register Model Action */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#252E3B] pb-5">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl md:text-3xl font-bold font-mono tracking-tight text-white">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
               Registered Model Registry
             </h1>
-            <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-purple-950/60 text-purple-300 border border-purple-800/40 font-semibold">
+            <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-[#101417] text-purple-300 border border-[#252E3B] font-semibold">
               {filteredModels.length} Versions Registered
             </span>
           </div>
-          <p className="text-xs font-mono text-slate-400 mt-1">
+          <p className="text-xs font-mono text-[#94a3b8] mt-1">
             Manage model lineage, artifacts, production promotion, candidate benchmarks, and rollbacks.
           </p>
         </div>
 
         <button
           onClick={() => setIsRegisterModalOpen(true)}
-          className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold font-mono text-xs rounded-xl shadow-lg flex items-center gap-2 transition-all"
+          className="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold font-mono text-xs rounded-lg shadow-md flex items-center gap-2 transition-all"
         >
           <Plus className="w-4 h-4" />
           Register New Model
@@ -105,14 +105,14 @@ export default function ModelsPage() {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 flex flex-wrap gap-4 items-center justify-between shadow-md">
-        <div className="flex items-center gap-3 flex-1 min-w-[240px] bg-slate-950 border border-slate-800 px-3.5 py-2 rounded-xl focus-within:border-purple-500 transition-colors">
-          <Search className="w-4 h-4 text-slate-400" />
+      <div className="bg-[#101417] border border-[#252E3B] rounded-lg p-4 flex flex-wrap gap-4 items-center justify-between">
+        <div className="flex items-center gap-3 flex-1 min-w-[240px] bg-[#101417] border border-[#252E3B] px-3.5 py-2 rounded-lg focus-within:border-purple-500 transition-colors">
+          <Search className="w-4 h-4 text-[#94a3b8]" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by model name or version tag (e.g. v18)..."
+            placeholder="Filter models by name or version..."
             className="bg-transparent border-none outline-none text-xs font-mono text-slate-200 placeholder-slate-500 w-full focus:ring-0"
           />
         </div>
@@ -121,7 +121,7 @@ export default function ModelsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-purple-500"
+            className="bg-[#101417] border border-[#252E3B] rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-purple-500"
           >
             <option value="All">All Statuses</option>
             <option value="PRODUCTION">PRODUCTION</option>
@@ -134,7 +134,7 @@ export default function ModelsPage() {
           <select
             value={algorithmFilter}
             onChange={(e) => setAlgorithmFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-purple-500"
+            className="bg-[#101417] border border-[#252E3B] rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-purple-500"
           >
             <option value="All">All Algorithms</option>
             <option value="XGBoost">XGBoost</option>

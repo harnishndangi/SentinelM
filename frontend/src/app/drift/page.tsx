@@ -164,31 +164,31 @@ export default function DriftPage() {
   const hasCriticalDrift = driftData.some((f) => f.severity === 'CRITICAL' || f.severity === 'HIGH');
 
   return (
-    <main className="p-6 md:p-8 flex-1 overflow-y-auto bg-slate-950 text-slate-100 w-full h-full space-y-6">
+    <main className="p-6 md:p-8 flex-1 overflow-y-auto bg-[#101417] text-slate-100 w-full h-full space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#252E3B] pb-5">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl md:text-3xl font-bold font-mono tracking-tight text-white">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
               Feature & Concept Drift Analyzer
             </h1>
             <StatusBadge status={hasCriticalDrift ? 'DEGRADED' : 'HEALTHY'} />
           </div>
-          <p className="text-xs font-mono text-slate-400 mt-1">
+          <p className="text-xs font-mono text-[#94a3b8] mt-1">
             Statistical covariate shift detection using Kolmogorov-Smirnov, PSI, Wasserstein, & JS Divergence tests
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           {/* Time-Window Selection */}
-          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 font-mono text-xs text-slate-300">
-            <span className="text-slate-500">Time Window:</span>
+          <div className="flex items-center gap-2 bg-[#101417] border border-[#252E3B] rounded-lg px-3 py-1.5 font-mono text-xs text-slate-300">
+            <span className="text-[#94a3b8]">Time Window:</span>
             {['1h', '24h', '7d', '30d'].map((tw) => (
               <button
                 key={tw}
                 onClick={() => setTimeWindow(tw)}
-                className={`px-2.5 py-1 rounded-lg transition-colors font-semibold ${
-                  timeWindow === tw ? 'bg-purple-600 text-white shadow-sm' : 'hover:bg-slate-800 text-slate-400'
+                className={`px-2.5 py-1 rounded transition-colors font-semibold ${
+                  timeWindow === tw ? 'bg-purple-600 text-white shadow-sm' : 'hover:bg-slate-800 text-[#94a3b8]'
                 }`}
               >
                 {tw}
@@ -197,6 +197,7 @@ export default function DriftPage() {
           </div>
         </div>
       </div>
+
 
       {/* Top Drift Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
