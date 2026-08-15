@@ -1,194 +1,406 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  Activity,
+  AlertTriangle,
+  Zap,
+  Filter,
+  BarChart2,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  X,
+  Sliders,
+  CheckCircle2,
+  AlertOctagon,
+  Layers,
+  Sparkles,
+} from 'lucide-react';
+import { StatusBadge, SeverityBadge, MetricCard, ChartCard, DataTable, AlertBanner } from '@/components/ui';
 import { useSentinelStore } from '@/store/useSentinelStore';
+import { apiClient } from '@/services/api';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ReferenceLine,
+} from 'recharts';
+
+export interface ExtendedDriftFeature {
+  featureName: string;
+  psi: number;
+  ks: number;
+  pValue: number;
+  jsDivergence: number;
+  wasserstein: number;
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  trend: 'up' | 'down' | 'stable';
+  refMean: number;
+  curMean: number;
+  nullCount: number;
+}
+
+const FEATURE_DRIFT_DATA: ExtendedDriftFeature[] = [
+  {
+    featureName: 'transaction_amount',
+    psi: 0.284,
+    ks: 0.312,
+    pValue: 0.001,
+    jsDivergence: 0.198,
+    wasserstein: 42.85,
+    severity: 'CRITICAL',
+    trend: 'up',
+    refMean: 124.5,
+    curMean: 310.2,
+    nullCount: 0,
+  },
+  {
+    featureName: 'device_type',
+    psi: 0.192,
+    ks: 0.215,
+    pValue: 0.024,
+    jsDivergence: 0.142,
+    wasserstein: 1.84,
+    severity: 'HIGH',
+    trend: 'up',
+    refMean: 0.72,
+    curMean: 0.45,
+    nullCount: 12,
+  },
+  {
+    featureName: 'ip_risk_score',
+    psi: 0.125,
+    ks: 0.141,
+    pValue: 0.082,
+    jsDivergence: 0.088,
+    wasserstein: 0.12,
+    severity: 'MEDIUM',
+    trend: 'stable',
+    refMean: 0.24,
+    curMean: 0.31,
+    nullCount: 2,
+  },
+  {
+    featureName: 'merchant_category',
+    psi: 0.082,
+    ks: 0.095,
+    pValue: 0.145,
+    jsDivergence: 0.054,
+    wasserstein: 0.65,
+    severity: 'LOW',
+    trend: 'down',
+    refMean: 14.2,
+    curMean: 14.8,
+    nullCount: 0,
+  },
+  {
+    featureName: 'billing_zip_mismatch',
+    psi: 0.045,
+    ks: 0.052,
+    pValue: 0.320,
+    jsDivergence: 0.028,
+    wasserstein: 0.05,
+    severity: 'LOW',
+    trend: 'stable',
+    refMean: 0.08,
+    curMean: 0.09,
+    nullCount: 0,
+  },
+];
+
+// Distribution Histogram for Drawer Component
+const DISTRIBUTION_HISTOGRAM = [
+  { bin: '0-100', ref: 450, cur: 180 },
+  { bin: '100-200', ref: 380, cur: 220 },
+  { bin: '200-300', ref: 120, cur: 390 },
+  { bin: '300-400', ref: 40, cur: 310 },
+  { bin: '400-500+', ref: 10, cur: 150 },
+];
+
+const HISTORICAL_DRIFT_TIMELINE = [
+  { time: '00:00', psi: 0.08, threshold: 0.2 },
+  { time: '04:00', psi: 0.11, threshold: 0.2 },
+  { time: '08:00', psi: 0.14, threshold: 0.2 },
+  { time: '12:00', psi: 0.29, threshold: 0.2 },
+  { time: '16:00', psi: 0.36, threshold: 0.2 },
+  { time: '20:00', psi: 0.284, threshold: 0.2 },
+];
 
 export default function DriftPage() {
-  const { driftingFeatures, injectDrift, recoveryActivities } = useSentinelStore();
-  const [notification, setNotification] = useState<string | null>(null);
+  const store = useSentinelStore();
+  const [timeWindow, setTimeWindow] = useState('24h');
+  const [severityFilter, setSeverityFilter] = useState('All');
+  const [selectedFeature, setSelectedFeature] = useState<ExtendedDriftFeature | null>(null);
 
-  const handleRetrain = (featureName: string) => {
-    injectDrift(featureName);
-    setNotification(`Retraining pipeline scheduled for feature '${featureName}'. Model candidate v19 initializing...`);
-    setTimeout(() => setNotification(null), 5000);
-  };
+  // TanStack Query for drift telemetry from backend
+  const { data: driftData = FEATURE_DRIFT_DATA } = useQuery({
+    queryKey: ['driftTelemetry', timeWindow],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get('/drift');
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          return res.data;
+        }
+        return FEATURE_DRIFT_DATA;
+      } catch (err) {
+        return FEATURE_DRIFT_DATA;
+      }
+    },
+  });
 
-  const handleQuarantine = (featureName: string) => {
-    setNotification(`Feature '${featureName}' quarantined! Dynamic schema fallback activated.`);
-    setTimeout(() => setNotification(null), 5000);
-  };
+  const filteredFeatures = driftData.filter(
+    (f) => severityFilter === 'All' || f.severity === severityFilter
+  );
+
+  const hasCriticalDrift = driftData.some((f) => f.severity === 'CRITICAL' || f.severity === 'HIGH');
 
   return (
-    <main className="p-6 md:p-8 flex-1 overflow-y-auto bg-background w-full h-full">
+    <main className="p-6 md:p-8 flex-1 overflow-y-auto bg-slate-950 text-slate-100 w-full h-full space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-xl gap-md">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
         <div>
-          <h1 className="text-display-lg font-display-lg text-on-surface mb-xs">Drift Monitoring</h1>
-          <p className="text-body-md font-body-md text-on-surface-variant">
-            Real-time feature drift, concept drift, Kolmogorov-Smirnov test scores, & PSI metrics.
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl md:text-3xl font-bold font-mono tracking-tight text-white">
+              Feature & Concept Drift Analyzer
+            </h1>
+            <StatusBadge status={hasCriticalDrift ? 'DEGRADED' : 'HEALTHY'} />
+          </div>
+          <p className="text-xs font-mono text-slate-400 mt-1">
+            Statistical covariate shift detection using Kolmogorov-Smirnov, PSI, Wasserstein, & JS Divergence tests
           </p>
         </div>
-        <button
-          onClick={() => handleRetrain('transaction_amount')}
-          className="bg-primary text-on-primary px-lg py-sm rounded-DEFAULT text-mono-label font-mono-label hover:bg-primary-fixed transition-colors flex items-center gap-sm shadow-[0px_4px_20px_rgba(208,188,255,0.1)]"
-        >
-          <span className="material-symbols-outlined text-sm">bolt</span>
-          Inject Test Drift
-        </button>
+
+        <div className="flex items-center gap-3">
+          {/* Time-Window Selection */}
+          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 font-mono text-xs text-slate-300">
+            <span className="text-slate-500">Time Window:</span>
+            {['1h', '24h', '7d', '30d'].map((tw) => (
+              <button
+                key={tw}
+                onClick={() => setTimeWindow(tw)}
+                className={`px-2.5 py-1 rounded-lg transition-colors font-semibold ${
+                  timeWindow === tw ? 'bg-purple-600 text-white shadow-sm' : 'hover:bg-slate-800 text-slate-400'
+                }`}
+              >
+                {tw}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Notification Toast */}
-      {notification && (
-        <div className="mb-6 p-4 bg-status-success/20 border border-status-success-text/40 rounded-lg text-status-success-text text-body-md font-mono-label flex items-center justify-between animate-fade-in">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined">auto_mode</span>
-            <span>{notification}</span>
+      {/* Top Drift Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <MetricCard
+          title="Overall Drift Status"
+          value={hasCriticalDrift ? 'DRIFT DETECTED' : 'NO DRIFT'}
+          subValue="2 features > 0.20 threshold"
+          status={hasCriticalDrift ? 'bad' : 'good'}
+          highlight
+        />
+        <MetricCard
+          title="Data Drift Score (PSI)"
+          value="0.284"
+          change={12.4}
+          subValue="max PSI (transaction_amount)"
+          status="bad"
+        />
+        <MetricCard
+          title="Prediction Drift (PSI)"
+          value="0.142"
+          change={4.2}
+          subValue="Output probability shift"
+          status="warning"
+        />
+        <MetricCard
+          title="Concept Drift (PR-AUC Loss)"
+          value="0.038"
+          change={-1.5}
+          subValue="PR-AUC degradation rate"
+          status="good"
+        />
+      </div>
+
+      {/* Feature Drift Heatmap & Filter Table */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-800">
+          <div>
+            <h3 className="text-sm font-semibold font-mono text-white flex items-center gap-2">
+              <Activity className="w-4 h-4 text-purple-400" />
+              Feature Drift Distribution Heatmap & Statistical Distance Table
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">Click any feature row to inspect baseline vs current distributions</p>
           </div>
-          <button onClick={() => setNotification(null)} className="text-status-success-text hover:text-white">
-            ✕
-          </button>
+
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-mono text-slate-400">Severity:</span>
+            <select
+              value={severityFilter}
+              onChange={(e) => setSeverityFilter(e.target.value)}
+              className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 font-mono text-xs text-purple-300 focus:outline-none focus:border-purple-500"
+            >
+              <option value="All">All Severities</option>
+              <option value="CRITICAL">CRITICAL (&gt; 0.25)</option>
+              <option value="HIGH">HIGH (0.18 - 0.25)</option>
+              <option value="MEDIUM">MEDIUM (0.10 - 0.18)</option>
+              <option value="LOW">LOW (&lt; 0.10)</option>
+            </select>
+          </div>
+        </div>
+
+        <DataTable
+          columns={[
+            {
+              key: 'featureName',
+              header: 'Feature Name',
+              render: (f: ExtendedDriftFeature) => (
+                <div className="flex items-center gap-2 font-bold text-white">
+                  <span className="text-purple-400">{f.featureName}</span>
+                  {f.severity === 'CRITICAL' && (
+                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" title="Critical Drift Alert" />
+                  )}
+                </div>
+              ),
+            },
+            {
+              key: 'psi',
+              header: 'PSI Score',
+              render: (f: ExtendedDriftFeature) => (
+                <span className={`font-mono font-bold ${f.psi > 0.2 ? 'text-rose-400' : 'text-slate-200'}`}>
+                  {f.psi.toFixed(3)}
+                </span>
+              ),
+            },
+            {
+              key: 'ks',
+              header: 'KS Statistic (p-val)',
+              render: (f: ExtendedDriftFeature) => (
+                <span className="font-mono text-slate-300">
+                  {f.ks.toFixed(3)} <span className="text-slate-500 text-[11px]">(p={f.pValue})</span>
+                </span>
+              ),
+            },
+            {
+              key: 'jsDivergence',
+              header: 'JS Divergence',
+              render: (f: ExtendedDriftFeature) => <span className="font-mono text-slate-300">{f.jsDivergence.toFixed(3)}</span>,
+            },
+            {
+              key: 'wasserstein',
+              header: 'Wasserstein Dist.',
+              render: (f: ExtendedDriftFeature) => <span className="font-mono text-slate-300">{f.wasserstein.toFixed(2)}</span>,
+            },
+            {
+              key: 'severity',
+              header: 'Severity',
+              render: (f: ExtendedDriftFeature) => <SeverityBadge severity={f.severity} size="sm" />,
+            },
+            {
+              key: 'trend',
+              header: 'Trend',
+              render: (f: ExtendedDriftFeature) => (
+                <div className="flex items-center gap-1 font-mono text-xs">
+                  {f.trend === 'up' && <TrendingUp className="w-3.5 h-3.5 text-rose-400" />}
+                  {f.trend === 'down' && <TrendingDown className="w-3.5 h-3.5 text-emerald-400" />}
+                  {f.trend === 'stable' && <Minus className="w-3.5 h-3.5 text-slate-400" />}
+                  <span className="uppercase text-[11px]">{f.trend}</span>
+                </div>
+              ),
+            },
+          ]}
+          data={filteredFeatures}
+          keyExtractor={(f: ExtendedDriftFeature) => f.featureName}
+          onRowClick={(f: ExtendedDriftFeature) => setSelectedFeature(f)}
+        />
+      </div>
+
+      {/* Feature Detail Drawer / Modal */}
+      {selectedFeature && (
+        <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/75 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border-l border-slate-700 w-full max-w-2xl h-full rounded-2xl p-6 shadow-2xl overflow-y-auto space-y-6 relative">
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl font-bold font-mono text-white">{selectedFeature.featureName}</h3>
+                  <SeverityBadge severity={selectedFeature.severity} />
+                </div>
+                <p className="text-xs font-mono text-slate-400 mt-1">Detailed Reference vs Live Inference Distribution Shift</p>
+              </div>
+
+              <button
+                onClick={() => setSelectedFeature(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Distribution Comparison Chart */}
+            <ChartCard
+              title="Reference vs Current Distribution"
+              subtitle="Baseline training data vs live production inference data buckets"
+            >
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={DISTRIBUTION_HISTOGRAM}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="bin" stroke="#64748b" tick={{ fontSize: 10, fontFamily: 'monospace' }} />
+                  <YAxis stroke="#64748b" tick={{ fontSize: 10, fontFamily: 'monospace' }} />
+                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: 8, fontSize: 12 }} />
+                  <Legend wrapperStyle={{ fontSize: 11, fontFamily: 'monospace' }} />
+                  <Bar dataKey="ref" name="Baseline Reference Data" fill="#38bdf8" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="cur" name="Current Live Production Data" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+
+            {/* Drift Score History Chart */}
+            <ChartCard
+              title="Drift Trajectory History"
+              subtitle="PSI distance score trajectory over time vs 0.20 threshold"
+            >
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={HISTORICAL_DRIFT_TIMELINE}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="time" stroke="#64748b" tick={{ fontSize: 10, fontFamily: 'monospace' }} />
+                  <YAxis domain={[0, 0.5]} stroke="#64748b" tick={{ fontSize: 10, fontFamily: 'monospace' }} />
+                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: 8, fontSize: 12 }} />
+                  <ReferenceLine y={0.2} label={{ value: 'PSI Threshold (0.2)', fill: '#f59e0b', fontSize: 10 }} stroke="#f59e0b" strokeDasharray="4 4" />
+                  <Line type="monotone" dataKey="psi" name="PSI Score" stroke="#a855f7" strokeWidth={2.5} />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartCard>
+
+            {/* Statistics Table */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 font-mono text-xs">
+              <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Summary Statistics & Test Metadata</h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                  <span className="text-slate-500 text-[10px] block">Reference Mean</span>
+                  <span className="text-sky-300 font-bold">{selectedFeature.refMean}</span>
+                </div>
+                <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                  <span className="text-slate-500 text-[10px] block">Current Live Mean</span>
+                  <span className="text-rose-300 font-bold">{selectedFeature.curMean}</span>
+                </div>
+                <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                  <span className="text-slate-500 text-[10px] block">Null Count</span>
+                  <span className="text-slate-200 font-bold">{selectedFeature.nullCount}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
-
-      {/* Statistical Drift Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-md mb-margin">
-        <div className="bg-surface card-border rounded-lg p-md flex flex-col justify-between">
-          <span className="text-body-sm font-body-sm text-on-surface-variant mb-2">KS Statistic (Max)</span>
-          <div className="flex items-end justify-between">
-            <span className="font-mono-metric text-[24px] font-semibold text-status-error-text">0.28</span>
-            <span className="bg-status-error text-status-error-text px-2 py-0.5 rounded text-[11px] font-mono-label font-bold">
-              CRITICAL
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-surface card-border rounded-lg p-md flex flex-col justify-between">
-          <span className="text-body-sm font-body-sm text-on-surface-variant mb-2">Population Stability Index (PSI)</span>
-          <div className="flex items-end justify-between">
-            <span className="font-mono-metric text-[24px] font-semibold text-status-warning-text">0.19</span>
-            <span className="bg-status-warning text-status-warning-text px-2 py-0.5 rounded text-[11px] font-mono-label font-bold">
-              MODERATE
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-surface card-border rounded-lg p-md flex flex-col justify-between">
-          <span className="text-body-sm font-body-sm text-on-surface-variant mb-2">Wasserstein Distance</span>
-          <div className="flex items-end justify-between">
-            <span className="font-mono-metric text-[24px] font-semibold text-on-surface">0.12</span>
-            <span className="bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded text-[11px] font-mono-label font-bold">
-              NORMAL
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-surface card-border rounded-lg p-md flex flex-col justify-between">
-          <span className="text-body-sm font-body-sm text-on-surface-variant mb-2">Concept Drift Index</span>
-          <div className="flex items-end justify-between">
-            <span className="font-mono-metric text-[24px] font-semibold text-status-success-text">0.04</span>
-            <span className="bg-status-success text-status-success-text px-2 py-0.5 rounded text-[11px] font-mono-label font-bold">
-              STABLE
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Feature Drift Analysis Table */}
-      <div className="bg-surface border border-outline-variant rounded-lg overflow-hidden mb-margin">
-        <div className="p-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
-          <h3 className="text-display-md font-display-md text-on-surface text-[18px]">
-            Feature-Level Drift Breakdown
-          </h3>
-          <span className="text-mono-label font-mono-label text-on-surface-variant text-body-sm">
-            Refreshed 2m ago
-          </span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-outline-variant bg-surface-container-low text-mono-table font-mono-table text-on-surface-variant">
-                <th className="table-cell-padding font-medium">FEATURE</th>
-                <th className="table-cell-padding font-medium">STATISTICAL TEST</th>
-                <th className="table-cell-padding font-medium">DRIFT SCORE</th>
-                <th className="table-cell-padding font-medium">P-VALUE</th>
-                <th className="table-cell-padding font-medium">STATUS</th>
-                <th className="table-cell-padding font-medium text-right">ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody className="text-body-md font-body-md divide-y divide-outline-variant">
-              {driftingFeatures.map((item) => (
-                <tr key={item.featureName} className="hover:bg-surface-container transition-colors">
-                  <td className="table-cell-padding font-mono-table text-on-surface font-semibold">
-                    {item.featureName}
-                  </td>
-                  <td className="table-cell-padding text-on-surface-variant">{item.testType}</td>
-                  <td className="table-cell-padding text-mono-metric font-mono-metric text-on-surface">
-                    {item.driftScore}
-                  </td>
-                  <td className="table-cell-padding text-mono-table font-mono-table text-on-surface-variant">
-                    {item.pValue}
-                  </td>
-                  <td className="table-cell-padding">
-                    {item.status === 'High' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-mono-table font-mono-table bg-status-error text-status-error-text border border-status-error-text/30">
-                        HIGH DRIFT
-                      </span>
-                    )}
-                    {item.status === 'Medium' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-mono-table font-mono-table bg-status-warning text-status-warning-text border border-status-warning-text/30">
-                        MEDIUM DRIFT
-                      </span>
-                    )}
-                    {item.status === 'Low' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-mono-table font-mono-table bg-surface-variant text-on-surface-variant border border-outline-variant">
-                        LOW
-                      </span>
-                    )}
-                  </td>
-                  <td className="table-cell-padding text-right space-x-2">
-                    <button
-                      onClick={() => handleRetrain(item.featureName)}
-                      className="px-3 py-1 rounded bg-primary/10 text-primary border border-primary/30 text-mono-label font-mono-label hover:bg-primary hover:text-on-primary transition-colors"
-                    >
-                      Trigger Retraining
-                    </button>
-                    <button
-                      onClick={() => handleQuarantine(item.featureName)}
-                      className="px-3 py-1 rounded bg-surface-container-high text-on-surface-variant hover:text-status-error-text hover:bg-status-error transition-colors text-mono-label font-mono-label"
-                    >
-                      Quarantine
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Recovery Log Snapshot */}
-      <div className="bg-surface card-border rounded-lg p-lg">
-        <h3 className="text-display-md text-on-surface text-[18px] mb-4">
-          Self-Healing Recovery Log
-        </h3>
-        <div className="space-y-3">
-          {recoveryActivities.map((act) => (
-            <div
-              key={act.id}
-              className="flex items-center justify-between p-3 rounded bg-surface-container-low border border-outline-variant/50 text-body-sm"
-            >
-              <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-primary text-[18px]">
-                  {act.isCurrent ? 'sync' : 'check_circle'}
-                </span>
-                <span className="text-on-surface font-mono-label">{act.title}</span>
-              </div>
-              <span className="text-on-surface-variant font-mono-table text-[11px]">{act.timeAgo}</span>
-            </div>
-          ))}
-        </div>
-      </div>
     </main>
   );
 }

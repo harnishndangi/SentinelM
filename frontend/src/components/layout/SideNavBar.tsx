@@ -4,20 +4,41 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 
+import {
+  LayoutDashboard,
+  Cpu,
+  Activity,
+  GitCommit,
+  AlertTriangle,
+  RotateCcw,
+  Rocket,
+  FlaskConical,
+  Database,
+  Bell,
+  FileText,
+  Settings,
+  Shield,
+  PlayCircle,
+  GitBranch,
+  LogOut,
+} from 'lucide-react';
+
+
 const NAV_ITEMS = [
-  { label: 'Overview', href: '/', icon: 'dashboard' },
-  { label: 'Models', href: '/models', icon: 'analytics' },
-  { label: 'Monitoring', href: '/monitoring', icon: 'monitoring' },
-  { label: 'Drift', href: '/drift', icon: 'insights' },
-  { label: 'Incidents', href: '/incidents', icon: 'error' },
-  { label: 'Retraining', href: '/retraining', icon: 'history' },
-  { label: 'Deployments', href: '/deployments', icon: 'rocket_launch' },
-  { label: 'Experiments', href: '/experiments', icon: 'science' },
-  { label: 'Data', href: '/data', icon: 'database' },
-  { label: 'Alerts', href: '/alerts', icon: 'notifications_active' },
-  { label: 'Audit Logs', href: '/audit-logs', icon: 'assignment_turned_in' },
-  { label: 'Settings', href: '/settings', icon: 'settings' },
+  { label: 'Overview', href: '/', icon: LayoutDashboard },
+  { label: 'Models', href: '/models', icon: Cpu },
+  { label: 'Monitoring', href: '/monitoring', icon: Activity },
+  { label: 'Drift', href: '/drift', icon: GitCommit },
+  { label: 'Incidents', href: '/incidents', icon: AlertTriangle },
+  { label: 'Retraining', href: '/retraining', icon: RotateCcw },
+  { label: 'Deployments', href: '/deployments', icon: Rocket },
+  { label: 'Experiments', href: '/experiments', icon: FlaskConical },
+  { label: 'Data', href: '/data', icon: Database },
+  { label: 'Alerts', href: '/alerts', icon: Bell },
+  { label: 'Audit Logs', href: '/audit-logs', icon: FileText },
+  { label: 'Settings', href: '/settings', icon: Settings },
 ];
+
 
 export default function SideNavBar() {
   const pathname = usePathname();
@@ -49,15 +70,19 @@ export default function SideNavBar() {
         }`}
       >
         <span>{environment}</span>
-        <span className="material-symbols-outlined text-[16px]">
-          {environment === 'PRODUCTION' ? 'play_circle' : 'alt_route'}
-        </span>
+        {environment === 'PRODUCTION' ? (
+          <PlayCircle className="w-4 h-4" />
+        ) : (
+          <GitBranch className="w-4 h-4" />
+        )}
       </button>
+
 
       {/* Links List */}
       <ul className="flex-1 space-y-1">
         {NAV_ITEMS.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || (item.href === '/' && pathname === '/dashboard');
+          const ItemIcon = item.icon;
           return (
             <li key={item.href}>
               <Link
@@ -68,12 +93,7 @@ export default function SideNavBar() {
                     : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
                 }`}
               >
-                <span
-                  className="material-symbols-outlined text-[20px]"
-                  style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}
-                >
-                  {item.icon}
-                </span>
+                <ItemIcon className="w-5 h-5" />
                 <span className="text-body-md font-body-md">{item.label}</span>
               </Link>
             </li>
@@ -81,15 +101,17 @@ export default function SideNavBar() {
         })}
       </ul>
 
+
       {/* Footer / Logout */}
       <div className="mt-auto border-t border-outline-variant pt-4">
         <button
           onClick={() => alert('Logged out successfully.')}
           className="w-full flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors duration-200 ease-in-out"
         >
-          <span className="material-symbols-outlined text-[20px]">logout</span>
+          <LogOut className="w-5 h-5" />
           <span className="text-body-md font-body-md">Logout</span>
         </button>
+
       </div>
     </nav>
   );
